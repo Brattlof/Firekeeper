@@ -1,0 +1,70 @@
+local _, FK = ...
+
+-- Forever is a new client and Blizzard has published no addon API notes for it.
+-- Rather than assume a call exists and break on login, every uncertain API is
+-- probed once here. Each module then asks `FK.Capabilities.Has("addonComm")`
+-- and degrades to something that still works.
+--
+-- `/fk caps` prints the result, which is also what we ask beta testers to paste
+-- into a bug report. See docs/RESEARCH.md.
+local Capabilities = FK.RegisterModule("Capabilities", {})
+FK.Capabilities = Capabilities
+
+local probes = {
+	addonComm = function()
+		return C_ChatInfo ~= nil
+			and type(C_ChatInfo.SendAddonMessage) == "function"
+			and type(C_ChatInfo.RegisterAddonMessagePrefix) == "function"
+	end,
+	professionsApi = function()
+		return type(_G.GetProfessions) == "function"
+			or (C_TradeSkillUI ~= nil and type(C_TradeSkillUI.GetAllProfessionTradeSkillLines) == "function")
+	end,
+	spellBookScan = function()
+		return C_SpellBook ~= nil and type(C_SpellBook.GetSpellBookSkillLineInfo) == "function"
+	end,
+	unitAuras = function()
+		return C_UnitAuras ~= nil and type(C_UnitAuras.GetAuraDataByIndex) == "function"
+	end,
+	groupRoster = function()
+		return type(_G.GetNumGroupMembers) == "function" and type(_G.UnitClass) == "function"
+	end,
+	mapPosition = function()
+		return C_Map ~= nil and type(C_Map.GetBestMapForUnit) == "function"
+			and type(C_Map.GetPlayerMapPosition) == "function"
+	end,
+}
+
+Capabilities.results = {}
+
+function Capabilities:OnLoad()
+	for name, probe in pairs(probes) do
+		local ok, result = pcall(probe)
+		self.results[name] = ok and result == true or false
+	end
+	FK.Debug("capability probe finished")
+end
+
+function Capabilities.Has(name)
+	return Capabilities.results[name] == true
+end
+
+function Capabilities.Report()
+	local names = {}
+	for name in pairs(probes) do
+		table.insert(names, name)
+	end
+	table.sort(names)
+
+	local build, interface = "?", "?"
+	if type(GetBuildInfo) == "function" then
+		local version, _, _, tocVersion = GetBuildInfo()
+		build, interface = version or "?", tocVersion or "?"
+	end
+
+	local lines = { ("Firekeeper %s on client %s (interface %s)"):format(FK.version, build, interface) }
+	for _, name in ipairs(names) do
+		table.insert(lines, ("  %s: %s"):format(name, Capabilities.Has(name) and "|cff40ff40yes|r" or "|cffff4040no|r"))
+	end
+	return lines
+end

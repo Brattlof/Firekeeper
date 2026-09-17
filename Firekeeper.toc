@@ -1,0 +1,31 @@
+## Interface: 120000
+## Title: Firekeeper
+## Notes: Plan a campsite together: who can place what, which buffs your group is actually missing, and when objects come off cooldown.
+## Author: Firekeeper contributors
+## Version: @project-version@
+## SavedVariables: FirekeeperDB
+## SavedVariablesPerCharacter: FirekeeperCharDB
+## IconTexture: Interface\Icons\Spell_Fire_Fire
+
+## X-Category: Professions
+## X-License: MIT
+## X-Website: https://github.com/Brattlof/Firekeeper
+## X-Curse-Project-ID:
+## X-Wago-ID:
+
+Locales/enUS.lua
+
+Data/BuffGroups.lua
+Data/CampObjects.lua
+
+Core/Init.lua
+Core/Plan.lua
+Core/Cooldowns.lua
+Core/Capabilities.lua
+Core/Professions.lua
+Core/Roster.lua
+Core/Comm.lua
+Core/Camp.lua
+Core/Commands.lua
+
+UI/CampFrame.lua

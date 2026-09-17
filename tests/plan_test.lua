@@ -1,0 +1,138 @@
+local FK, t = ...
+
+local Plan = FK.Plan
+local tests = {}
+
+local function contributor(name, objects, readyIn)
+	return { name = name, objects = objects, ready = (readyIn or 0) <= 0, readyIn = readyIn or 0 }
+end
+
+function tests.suggests_the_best_object_for_each_player()
+	local plan = Plan.Evaluate({
+		contributors = {
+			contributor("Ana", { "sharpening_wheel" }),
+			contributor("Bo", { "incense_candle" }),
+		},
+	})
+	t.count(plan.suggestions, 2, "both players get a suggestion")
+	t.equals(plan.capacity, 3, "a basic fire holds three objects")
+	t.equals(plan.free, 1, "one slot left over")
+end
+
+function tests.skips_a_buff_the_group_already_has()
+	local plan = Plan.Evaluate({
+		covered = { attack_power = "Battle Shout" },
+		contributors = { contributor("Ana", { "sharpening_wheel" }) },
+	})
+	t.count(plan.suggestions, 0, "no suggestion for a covered buff")
+	t.count(plan.redundant, 1, "the wheel is reported as wasted")
+	t.equals(plan.redundant[1].reason.code, "covered", "reason is the class buff")
+	t.equals(Plan.ReasonText(plan.redundant[1].reason),
+		"Attack Power is already covered by Battle Shout", "readable reason")
+end
+
+function tests.one_object_per_player()
+	local plan = Plan.Evaluate({
+		contributors = { contributor("Ana", { "sharpening_wheel", "alchemy_lab" }) },
+	})
+	t.count(plan.suggestions, 1, "a player contributes once")
+end
+
+function tests.never_suggests_two_of_the_same_effect()
+	local plan = Plan.Evaluate({
+		contributors = {
+			contributor("Ana", { "sharpening_wheel" }),
+			contributor("Bo", { "sharpening_wheel" }),
+		},
+	})
+	t.count(plan.suggestions, 1, "the second wheel adds nothing")
+	t.count(plan.redundant, 0, "it is simply not suggested, not flagged")
+end
+
+function tests.respects_slot_capacity()
+	local plan = Plan.Evaluate({
+		slots = 1,
+		contributors = {
+			contributor("Ana", { "sharpening_wheel" }),
+			contributor("Bo", { "incense_candle" }),
+			contributor("Cy", { "faction_banner" }),
+		},
+	})
+	t.count(plan.suggestions, 1, "only one slot, one suggestion")
+	t.equals(plan.free, 0, "and it is spoken for")
+end
+
+function tests.a_campfire_upgrade_comes_first_and_buys_slots()
+	local plan = Plan.Evaluate({
+		slots = 3,
+		contributors = {
+			contributor("Ana", { "sharpening_wheel" }),
+			contributor("Bo", { "incense_candle" }),
+			contributor("Cy", { "faction_banner" }),
+			contributor("Di", { "upgraded_campfire" }),
+		},
+	})
+	t.equals(plan.suggestions[1].objectId, "upgraded_campfire", "the fire is upgraded first")
+	t.equals(plan.capacity, 5, "capacity rises to five")
+	t.count(plan.suggestions, 4, "everyone still gets to contribute")
+end
+
+function tests.objects_already_on_the_fire_are_not_repeated()
+	local plan = Plan.Evaluate({
+		placed = { { player = "Ana", objectId = "incense_candle" } },
+		contributors = { contributor("Bo", { "incense_candle" }) },
+	})
+	t.count(plan.suggestions, 0, "no second candle")
+	t.equals(plan.redundant[1].reason.code, "duplicate", "reported as a duplicate")
+	t.equals(plan.used, 1, "one slot is in use")
+end
+
+function tests.a_player_who_already_contributed_is_left_alone()
+	local plan = Plan.Evaluate({
+		placed = { { player = "Ana", objectId = "incense_candle" } },
+		contributors = { contributor("Ana", { "sharpening_wheel" }) },
+	})
+	t.count(plan.suggestions, 0, "Ana has spent her contribution")
+end
+
+function tests.players_on_cooldown_are_listed_as_waiting()
+	local plan = Plan.Evaluate({
+		contributors = { contributor("Ana", { "sharpening_wheel" }, 900) },
+	})
+	t.count(plan.suggestions, 0, "nothing to suggest")
+	t.count(plan.waiting, 1, "Ana is waiting")
+	t.equals(plan.waiting[1].readyIn, 900, "with her remaining cooldown")
+end
+
+function tests.unknown_object_ids_are_reported_not_ignored()
+	local plan = Plan.Evaluate({
+		contributors = { contributor("Ana", { "something_from_a_newer_version" }) },
+	})
+	t.count(plan.unknownObjects, 1, "an unknown id is surfaced")
+	t.count(plan.suggestions, 0, "and never planned around")
+end
+
+function tests.the_plan_is_deterministic()
+	local state = {
+		contributors = {
+			contributor("Ana", { "sharpening_wheel", "alchemy_lab" }),
+			contributor("Bo", { "incense_candle", "tanning_rack" }),
+			contributor("Cy", { "faction_banner" }),
+		},
+	}
+	local first = Plan.Evaluate(state)
+	local second = Plan.Evaluate(state)
+	for index, suggestion in ipairs(first.suggestions) do
+		t.equals(second.suggestions[index].objectId, suggestion.objectId,
+			"same plan on both clients, position " .. index)
+	end
+end
+
+function tests.flags_that_suggestions_rest_on_unconfirmed_data()
+	local plan = Plan.Evaluate({
+		contributors = { contributor("Ana", { "sharpening_wheel" }) },
+	})
+	t.isTrue(plan.uncertain, "nothing is confirmed in game yet")
+end
+
+return tests

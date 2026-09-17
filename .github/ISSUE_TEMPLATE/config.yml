@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: API behaviour on the Forever beta
+    url: https://github.com/Brattlof/Firekeeper/blob/main/docs/RESEARCH.md
+    about: Open questions about the Forever client, and how to answer one.

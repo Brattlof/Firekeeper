@@ -1,0 +1,81 @@
+name: Camp object sighting
+description: Report a campsite object you saw in game, so the data stops being guesswork.
+title: "[object] "
+labels: ["data", "needs-verification"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One object per report. If you are not sure about a field, leave it empty —
+        an empty field is more useful than a guess.
+
+  - type: input
+    id: object
+    attributes:
+      label: Object name
+      placeholder: Sharpening Wheel
+    validations:
+      required: true
+
+  - type: dropdown
+    id: profession
+    attributes:
+      label: Profession
+      options:
+        - Alchemy
+        - Blacksmithing
+        - Cooking
+        - Enchanting
+        - Engineering
+        - First Aid
+        - Fishing
+        - Herbalism
+        - Leatherworking
+        - Mining
+        - Skinning
+        - Tailoring
+    validations:
+      required: true
+
+  - type: input
+    id: skill
+    attributes:
+      label: Skill level required
+      placeholder: "20"
+
+  - type: dropdown
+    id: source
+    attributes:
+      label: Where it is learned
+      options:
+        - Trainer or camping NPC
+        - Blueprint drop
+        - Not sure
+
+  - type: input
+    id: blueprint
+    attributes:
+      label: If a blueprint, which boss dropped it
+      placeholder: "Deadmines — Mr. Smite"
+
+  - type: textarea
+    id: effect
+    attributes:
+      label: What it does
+      description: The tooltip text, word for word, is ideal. Include buff values and duration.
+      placeholder: |
+        Sharpening Wheel
+        Grants 30 attack power to everyone resting at the campsite for 1 hour.
+
+  - type: input
+    id: build
+    attributes:
+      label: Client build
+      description: The output of /fk caps includes it.
+      placeholder: "1.20.0 (interface 120000)"
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: Screenshots are welcome. Drag them into this box.

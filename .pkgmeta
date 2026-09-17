@@ -1,0 +1,11 @@
+package-as: Firekeeper
+
+enable-nolib-creation: no
+
+ignore:
+  - .editorconfig
+  - .luacheckrc
+  - .github
+  - CONTRIBUTING.md
+  - docs
+  - tests
