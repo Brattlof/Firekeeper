@@ -15,6 +15,8 @@ local probes = {
 		return C_ChatInfo ~= nil
 			and type(C_ChatInfo.SendAddonMessage) == "function"
 			and type(C_ChatInfo.RegisterAddonMessagePrefix) == "function"
+			and Enum ~= nil and Enum.SendAddonMessageResult ~= nil
+			and Enum.RegisterAddonMessagePrefixResult ~= nil
 	end,
 	professionsApi = function()
 		return type(_G.GetProfessions) == "function"
