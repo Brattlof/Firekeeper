@@ -33,12 +33,19 @@ local function send(message)
 	if not target then
 		return false
 	end
-	local ok = pcall(C_ChatInfo.SendAddonMessage, Comm.PREFIX, message, target)
+	-- A throw means the API is unusable here. Throttling, lockdown and the like come
+	-- back as a result code instead, and only mean this one message did not go.
+	local ok, result = pcall(C_ChatInfo.SendAddonMessage, Comm.PREFIX, message, target)
 	if not ok then
 		FK.Debug("SendAddonMessage failed; falling back to local-only mode")
 		FK.Capabilities.results.addonComm = false
+		return false
 	end
-	return ok
+	if result ~= Enum.SendAddonMessageResult.Success then
+		FK.Debug("addon message not sent, result %s", tostring(result))
+		return false
+	end
+	return true
 end
 
 -- HELLO:version
@@ -118,7 +125,13 @@ function Comm:OnLogin()
 		return
 	end
 
-	pcall(C_ChatInfo.RegisterAddonMessagePrefix, Comm.PREFIX)
+	local ok, result = pcall(C_ChatInfo.RegisterAddonMessagePrefix, Comm.PREFIX)
+	local registered = Enum.RegisterAddonMessagePrefixResult
+	if not ok or (result ~= registered.Success and result ~= registered.DuplicatePrefix) then
+		FK.Debug("could not register the %s prefix, result %s; local-only mode", Comm.PREFIX, tostring(result))
+		FK.Capabilities.results.addonComm = false
+		return
+	end
 
 	FK.eventFrame:RegisterEvent("CHAT_MSG_ADDON")
 	FK.eventFrame:HookScript("OnEvent", function(_, event, prefix, message, _, sender)

@@ -22,6 +22,7 @@ read_globals = {
 	"C_TradeSkillUI",
 	"C_UnitAuras",
 	"DEFAULT_CHAT_FRAME",
+	"Enum",
 	"GetBuildInfo",
 	"GetChannelName",
 	"GetNumGroupMembers",
