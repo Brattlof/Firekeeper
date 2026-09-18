@@ -12,6 +12,8 @@ build you tested on and what happened, including "it did nothing".
 
 ## Code
 
+- Clone with `git clone --recurse-submodules`, or run `git submodule update --init` in an
+  existing clone. That fetches the ponytail plugin the Claude Code settings load.
 - Lua 5.1, tabs for indentation, no external libraries. The addon deliberately has no
   dependencies: a new client is a bad place to inherit someone else's compatibility
   problems.
