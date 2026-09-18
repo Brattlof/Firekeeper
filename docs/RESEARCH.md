@@ -1,8 +1,8 @@
 # Open questions about the Forever client
 
 Blizzard has published no addon API notes for World of Warcraft: Forever. The client
-reports `Interface: 120000` and pairs the modern UI architecture with a vanilla game, so
-neither Classic Era habits nor retail habits can be assumed to hold.
+reports interface `16001` (version 1.60.1) and pairs the modern UI architecture with a
+vanilla game, so neither Classic Era habits nor retail habits can be assumed to hold.
 
 Every question below is answered the same way: run the addon on the beta, type
 `/fk caps`, and report what you see. A question closes when someone states the client

@@ -1,4 +1,4 @@
-## Interface: 120000
+## Interface: 16001
 ## Title: Firekeeper
 ## Notes: Plan a campsite together: who can place what, which buffs your group is actually missing, and when objects come off cooldown.
 ## Author: Firekeeper contributors
