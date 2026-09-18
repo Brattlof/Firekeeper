@@ -85,7 +85,7 @@ function Plan.Evaluate(state)
 	local candidates, redundant, waiting, unknownObjects = {}, {}, {}, {}
 
 	for _, contributor in ipairs(state.contributors or {}) do
-		if spentPlayers[contributor.name] then
+		if spentPlayers[contributor.name] then -- luacheck: ignore 542
 			-- Already gave their one object to this fire.
 		elseif contributor.ready == false then
 			table.insert(waiting, { player = contributor.name, readyIn = contributor.readyIn })
