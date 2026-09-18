@@ -14,6 +14,13 @@
     "commit": "",
     "pr": ""
   },
+  "permissions": {
+    "allow": [
+      "Bash(luacheck *)",
+      "Bash(lua5.1 tests/run.lua)",
+      "Bash(luajit tests/run.lua)"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {
@@ -24,6 +31,18 @@
             "if": "Bash(git commit*)",
             "command": "input=$(cat); case \"$input\" in *'git switch -c '*'git commit'*|*'git checkout -b '*'git commit'*) exit 0 ;; *'git commit'*) ;; *) exit 0 ;; esac; [ \"$(git -C \"$CLAUDE_PROJECT_DIR\" rev-parse --abbrev-ref HEAD 2>/dev/null)\" = main ] && { echo \"Refusing to commit on main. Branch first: git switch -c <type>/<short-description>, then commit and open a PR. See .claude/rules/git-conventions.md\" >&2; exit 2; }; exit 0",
             "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/lua-check.sh\"",
+            "timeout": 60
           }
         ]
       }
