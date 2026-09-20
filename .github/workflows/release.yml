@@ -9,6 +9,14 @@ jobs:
   package:
     name: Package and upload
     runs-on: ubuntu-latest
+
+    # This repository's default workflow token is read-only, so creating the
+    # release came back "Resource not accessible by integration" (403) even
+    # though the zip had already been built. Granted here rather than by
+    # loosening the repository-wide setting, so every other workflow stays
+    # read-only.
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
