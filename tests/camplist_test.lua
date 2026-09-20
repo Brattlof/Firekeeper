@@ -150,4 +150,23 @@ function tests.a_message_from_before_the_layer_field_still_decodes()
 	t.count(back.professions, 2, "including both professions")
 end
 
+function tests.a_layer_only_means_something_on_your_own_map()
+	-- The layer is a GUID zoneUID, which varies by zone as well as by shard, so
+	-- two numbers from different maps say nothing. CampList supplies `sameMap`;
+	-- Discovery is what refuses to compare across it.
+	CampList.Clear()
+	CampList.Upsert("Here", camp({ layer = 99 }), 100)
+	CampList.Upsert("Elsewhere", camp({ uiMapID = 1, layer = 99 }), 100)
+
+	local active = CampList.Active(100, { uiMapID = 1440, x = 0.5, y = 0.5 })
+	local byHost = {}
+	for _, entry in ipairs(active) do
+		byHost[entry.host] = entry
+	end
+	t.equals(byHost.Here.sameMap, true, "the camp on our map is marked as such")
+	t.equals(byHost.Elsewhere.sameMap, false, "and the one on another map is not")
+	t.equals(byHost.Here.layer, 99, "both carry their layer")
+	t.equals(byHost.Elsewhere.layer, 99, "even the one we must not compare")
+end
+
 return tests
