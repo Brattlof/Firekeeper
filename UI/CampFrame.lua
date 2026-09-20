@@ -375,18 +375,27 @@ local function buildPlaceTab(parent)
 					and C_Item.GetItemIconByID(object.itemId)
 				button.icon:SetTexture(icon or FK.Theme.ICON)
 
+				local effect = object.effect or {}
+				local ownBuff = effect.kind == "buff" and effect.buff or nil
+				local count = FK.Professions.CountOf(object)
+
 				local carried = FK.Data.EffectiveBuff(object)
 				button.detail = carried and FK.Data.buffGroups[carried]
 					and FK.Data.buffGroups[carried].label or "No buff"
-
-				local effect = object.effect or {}
-				local ownBuff = effect.kind == "buff" and effect.buff or nil
+				if count and count > 0 then
+					button.detail = ("%s — %d in your bags"):format(button.detail, count)
+				end
 
 				local tint, reason = FK.Theme.colors.emberDim, nil
 				button.placeable = true
 
 				local raisesCapacity = effect.kind == "slots"
-				if spent then
+				if count == 0 then
+					-- Skill says you could make one. It does not say you have
+					-- one, and only one of those puts an object on the fire.
+					tint, reason = FK.Theme.colors.smoke, "You have none in your bags"
+					button.placeable = false
+				elseif spent then
 					tint, reason = FK.Theme.colors.smoke, "You have already given this fire an object"
 					button.placeable = false
 				elseif not raisesCapacity and plan.used >= plan.capacity then

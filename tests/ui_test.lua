@@ -50,6 +50,12 @@ local function build(world)
 		end,
 		PlaceableIds = function() return { "anvil" } end,
 		Set = function(self, name, skill) self.known[name] = tonumber(skill) end,
+		CountOf = function(object)
+			local faction = UnitFactionGroup and UnitFactionGroup("player") or nil
+			local itemId = FK.Data.ItemIdFor(object, faction)
+			local ok, count = pcall(C_Item.GetItemCount, itemId)
+			return ok and count or nil
+		end,
 	}
 	FK.Auras = {
 		Missing = function()

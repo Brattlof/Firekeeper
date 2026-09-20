@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **The Place tab now knows what is in your bags.** Having the skill to make a Sharpening
+  Wheel is not the same as carrying one, and only one of those puts an object on a fire.
+  Objects you have none of are greyed out and say so, and the ones you do have show how
+  many. Your group is told what you are actually carrying rather than what your professions
+  could theoretically produce, so the planner stops assigning you a slot you cannot fill.
+  On a client that will not report bag contents it falls back to skill, because offering
+  too much beats telling everyone you can place nothing.
+
 ## 0.3.0 — 20 September 2026
 
 - **Clicking an object on the Place tab now actually places it.** The buttons are secure
