@@ -84,6 +84,31 @@ function Capabilities:OnLoad()
 	FK.Debug("capability probe finished")
 end
 
+--- Probes again once the player is in the world, then writes the answers down.
+--
+-- Two reasons to repeat the work: an aura read and a look at the minimap frame
+-- mean nothing at `ADDON_LOADED`, and the result is only useful to us if it
+-- reaches the disk. `/fk caps` prints the same thing for the player.
+function Capabilities:OnLogin()
+	self:OnLoad()
+
+	local build, interface = "?", "?"
+	if type(GetBuildInfo) == "function" then
+		local version, _, _, tocVersion = GetBuildInfo()
+		build, interface = version or "?", tocVersion or "?"
+	end
+
+	local answers = {}
+	for name in pairs(probes) do
+		answers[name] = Capabilities.Has(name)
+	end
+
+	FK.Diag("addon", FK.version)
+	FK.Diag("build", build)
+	FK.Diag("interface", interface)
+	FK.Diag("probes", answers)
+end
+
 function Capabilities.Has(name)
 	return Capabilities.results[name] == true
 end
@@ -105,5 +130,6 @@ function Capabilities.Report()
 	for _, name in ipairs(names) do
 		table.insert(lines, ("  %s: %s"):format(name, Capabilities.Has(name) and "|cff40ff40yes|r" or "|cffff4040no|r"))
 	end
+	table.insert(lines, "|cff888888all of this is saved to disk on /reload, so you can attach the file|r")
 	return lines
 end

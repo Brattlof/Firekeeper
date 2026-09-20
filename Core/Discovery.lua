@@ -64,8 +64,10 @@ function Discovery:Channel()
 	local ok, index = pcall(_G.GetChannelName, self.CHANNEL)
 	if ok and type(index) == "number" and index > 0 then
 		self.channelIndex = index
+		FK.Diag("campChannel", index)
 		return index
 	end
+	FK.Diag("campChannel", "join failed")
 	return nil
 end
 
@@ -230,6 +232,8 @@ function Discovery.Waypoint(camp)
 		uiMapID = camp.uiMapID,
 		position = { x = camp.x, y = camp.y },
 	})
+	-- FK-12: whether a hand-built point is accepted, given UiMapPoint is absent.
+	FK.Diag("waypoint", ok and tostring(wasSet) or "error")
 	return ok and wasSet == true
 end
 

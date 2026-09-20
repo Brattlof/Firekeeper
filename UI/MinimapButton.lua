@@ -147,6 +147,7 @@ end
 function MinimapButton:OnLogin()
 	if not Minimap then
 		FK.Debug("no Minimap frame; skipping the minimap button")
+		FK.Diag("minimapButton", "no Minimap frame")
 		return
 	end
 	local ok, err = pcall(function()
@@ -155,7 +156,10 @@ function MinimapButton:OnLogin()
 			self.button:Hide()
 		end
 	end)
-	if not ok then
+	if ok then
+		FK.Diag("minimapButton", "drawn")
+	else
 		FK.Debug("minimap button failed to draw: %s", tostring(err))
+		FK.Diag("minimapButton", "failed: " .. tostring(err))
 	end
 end
