@@ -17,6 +17,7 @@ local function usage()
 		"|cffffff00/fk guild [share]|r — guildies nearby; `share` toggles sharing your own spot",
 		"|cffffff00/fk buffs [key]|r — class buffs your group is missing; a key toggles an optional one",
 		"|cffffff00/fk cd|r — cooldowns for your characters",
+		"|cffffff00/fk train|r — what each profession can place, and what is next",
 		"|cffffff00/fk prof <name> <skill>|r — set a profession by hand",
 		"|cffffff00/fk legacy <fieldGuide|permanence> <rank>|r — record Legacy ranks",
 		"|cffffff00/fk caps|r — what this client lets the addon do",
@@ -251,6 +252,18 @@ function handlers.guild(rest)
 
 	if not FK.db.shareWithGuild then
 		FK.Print("|cff888888you are not sharing yours. |cffffff00/fk guild share|r|cff888888 turns it on.|r")
+	end
+end
+
+function handlers.train()
+	local entries = FK.Route.Evaluate(FK.Professions.known)
+	if #entries == 0 then
+		FK.Print("no professions detected. |cffffff00/fk prof Blacksmithing 145|r sets one by hand.")
+		return
+	end
+	FK.Print("camp objects by profession:")
+	for _, entry in ipairs(entries) do
+		FK.Print("  %s", FK.Route.Line(entry))
 	end
 end
 
