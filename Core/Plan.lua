@@ -204,6 +204,115 @@ function Plan.Evaluate(state)
 	}
 end
 
+-- Every camp buff, and which object gives it. Built once, because the answer
+-- cannot change while the addon is loaded.
+local function buffProviders()
+	local providers = {}
+	for _, object in ipairs(FK.Data.campObjects) do
+		local group = FK.Data.EffectiveBuff(object)
+		if group then
+			providers[group] = providers[group] or {}
+			table.insert(providers[group], object)
+		end
+	end
+	return providers
+end
+
+-- The order a player wants to read: what you can still do about, first.
+local STATUS_ORDER = { missing = 1, available = 2, placed = 3, class = 4 }
+
+--- The whole buff picture for this fire, for min-maxing it.
+--
+-- One row per camp buff that exists, each saying whether the group already has
+-- it from a class buff, whether it is on the fire, whether somebody standing
+-- here could place it, or whether nobody can. Takes the same state as
+-- `Plan.Evaluate`.
+--
+-- This is the question the addon exists to answer, so it is worked out here in
+-- plain Lua and merely drawn by the panel.
+function Plan.BuffReport(state)
+	state = state or {}
+	local covered = state.covered or {}
+	local rows = {}
+
+	-- What is already burning.
+	local placedBy = {}
+	for _, entry in ipairs(state.placed or {}) do
+		local object = objectFor(entry.objectId)
+		local group = object and FK.Data.EffectiveBuff(object)
+		if group then
+			placedBy[group] = { object = object, player = entry.player }
+		end
+	end
+
+	-- Who could place what, best object first so the row names the best one.
+	local offers = {}
+	for _, contributor in ipairs(state.contributors or {}) do
+		if contributor.ready ~= false then
+			for _, objectId in ipairs(contributor.objects or {}) do
+				local object = objectFor(objectId)
+				local group = object and FK.Data.EffectiveBuff(object)
+				if group then
+					local best = offers[group]
+					if not best or (object.tier or 1) > (best.object.tier or 1) then
+						offers[group] = { object = object, player = contributor.name }
+					end
+				end
+			end
+		end
+	end
+
+	for group, objects in pairs(buffProviders()) do
+		local definition = FK.Data.buffGroups[group]
+		local row = {
+			key = group,
+			label = definition and definition.label or group,
+			objects = objects,
+		}
+
+		if covered[group] then
+			row.status = "class"
+			row.by = covered[group]
+		elseif placedBy[group] then
+			row.status = "placed"
+			row.player = placedBy[group].player
+			row.object = placedBy[group].object
+			row.by = placedBy[group].object.name
+		elseif offers[group] then
+			row.status = "available"
+			row.player = offers[group].player
+			row.object = offers[group].object
+			row.by = offers[group].object.name
+		else
+			row.status = "missing"
+		end
+
+		table.insert(rows, row)
+	end
+
+	table.sort(rows, function(a, b)
+		local left, right = STATUS_ORDER[a.status], STATUS_ORDER[b.status]
+		if left ~= right then
+			return left < right
+		end
+		return a.label < b.label
+	end)
+
+	return rows
+end
+
+--- "Intellect — Incense Candle, Bo can place it"
+function Plan.BuffReportText(row)
+	if row.status == "class" then
+		return ("%s — already covered by %s"):format(row.label, row.by)
+	elseif row.status == "placed" then
+		return ("%s — %s, placed by %s"):format(row.label, row.by, row.player or "someone")
+	elseif row.status == "available" then
+		return ("%s — %s can place %s"):format(row.label, row.player or "someone", row.by)
+	end
+	return ("%s — nobody here can provide it"):format(row.label)
+end
+
 --- Turns a redundancy reason into a sentence for the panel and chat.
 function Plan.ReasonText(reason)
 	if not reason then

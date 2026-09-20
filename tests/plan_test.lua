@@ -190,4 +190,96 @@ function tests.flags_that_suggestions_rest_on_unconfirmed_data()
 	t.isTrue(plan.uncertain, "nothing is confirmed in game yet")
 end
 
+local function byKey(rows)
+	local map = {}
+	for _, row in ipairs(rows) do map[row.key] = row end
+	return map
+end
+
+function tests.the_buff_report_covers_every_camp_buff()
+	local rows = Plan.BuffReport({})
+	local map = byKey(rows)
+	-- One row per buff a camp object can give: nine groups.
+	for _, key in ipairs({ "strength", "attack_power", "intellect", "stamina", "spirit",
+		"mana_regen", "armor", "crit", "all_stats" }) do
+		t.isTrue(map[key], key .. " has a row")
+	end
+	t.count(rows, 9, "and no more than the nine that exist")
+end
+
+function tests.a_buff_nobody_can_bring_is_marked_missing()
+	local map = byKey(Plan.BuffReport({}))
+	t.equals(map.intellect.status, "missing", "an empty field has no Intellect")
+	t.equals(Plan.BuffReportText(map.intellect),
+		"Intellect — nobody here can provide it", "and says so")
+end
+
+function tests.a_class_buff_outranks_placing_anything()
+	local map = byKey(Plan.BuffReport({
+		covered = { intellect = "Arcane Intellect" },
+		contributors = { contributor("Ana", { "incense_candle" }) },
+	}))
+	t.equals(map.intellect.status, "class", "the mage has it covered")
+	t.equals(map.intellect.by, "Arcane Intellect", "named")
+	t.equals(Plan.BuffReportText(map.intellect),
+		"Intellect — already covered by Arcane Intellect", "readable")
+end
+
+function tests.what_is_on_the_fire_is_reported_as_placed()
+	local map = byKey(Plan.BuffReport({
+		placed = { { player = "Ana", objectId = "incense_candle" } },
+	}))
+	t.equals(map.intellect.status, "placed", "the candle is burning")
+	t.equals(map.intellect.player, "Ana", "and we know who placed it")
+end
+
+function tests.a_superseding_object_on_the_fire_counts_for_its_buff()
+	-- An Anvil carries the Sharpening Wheel's Strength.
+	local map = byKey(Plan.BuffReport({
+		placed = { { player = "Ana", objectId = "anvil" } },
+	}))
+	t.equals(map.strength.status, "placed", "Strength is covered by the anvil")
+	t.equals(map.strength.by, "Anvil", "named as the anvil")
+end
+
+function tests.somebody_who_could_place_it_is_offered()
+	local map = byKey(Plan.BuffReport({
+		contributors = { contributor("Bo", { "incense_candle" }) },
+	}))
+	t.equals(map.intellect.status, "available", "Bo can fix it")
+	t.equals(map.intellect.player, "Bo", "named")
+	t.equals(Plan.BuffReportText(map.intellect),
+		"Intellect — Bo can place Incense Candle", "readable")
+end
+
+function tests.the_best_object_for_a_buff_is_the_one_offered()
+	local map = byKey(Plan.BuffReport({
+		contributors = { contributor("Bo", { "sharpening_wheel", "master_forge" }) },
+	}))
+	t.equals(map.strength.by, "Master Forge", "the forge beats the wheel it replaces")
+end
+
+function tests.somebody_on_cooldown_cannot_be_counted_on()
+	local map = byKey(Plan.BuffReport({
+		contributors = { contributor("Bo", { "incense_candle" }, 900) },
+	}))
+	t.equals(map.intellect.status, "missing", "Bo is on cooldown, so it is not available")
+end
+
+function tests.the_report_puts_what_you_can_act_on_first()
+	local rows = Plan.BuffReport({
+		covered = { intellect = "Arcane Intellect" },
+		placed = { { player = "Ana", objectId = "faction_banner" } },
+		contributors = { contributor("Bo", { "lodestone" }) },
+	})
+	-- missing before available before placed before class.
+	local order = {}
+	for _, row in ipairs(rows) do table.insert(order, row.status) end
+	local rank = { missing = 1, available = 2, placed = 3, class = 4 }
+	for index = 2, #order do
+		t.isTrue(rank[order[index]] >= rank[order[index - 1]],
+			"row " .. index .. " (" .. order[index] .. ") is not out of order")
+	end
+end
+
 return tests
