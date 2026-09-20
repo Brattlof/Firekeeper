@@ -11,19 +11,37 @@ Roster.players = {} -- name -> { name, class, objects, ready, readyIn, lastSeen,
 
 local STALE_AFTER = 15 * 60
 
+--- A name we can actually use, or nil.
+--
+-- `UnitName` is marked SecretWhenUnitNameIdentityRestricted, and both of its
+-- returns come from that one call, so both have to be tested. A secret here
+-- would otherwise be compared to "", concatenated, and then used as a table
+-- key — three things that throw.
 function Roster.PlayerKey(name, realm)
-	if not name then
+	if FK.IsSecret(name) or FK.IsSecret(realm) then
 		return nil
 	end
-	if realm and realm ~= "" then
+	if not name or type(name) ~= "string" then
+		return nil
+	end
+	if realm and type(realm) == "string" and realm ~= "" then
 		return name .. "-" .. realm
 	end
 	return name
 end
 
 function Roster.SelfKey()
-	local name, realm = UnitName("player")
-	return Roster.PlayerKey(name, realm ~= "" and realm or GetRealmName and GetRealmName() or nil)
+	local ok, name, realm = pcall(UnitName, "player")
+	if not ok then
+		return nil
+	end
+	if FK.IsSecret(realm) or type(realm) ~= "string" or realm == "" then
+		realm = GetRealmName and GetRealmName() or nil
+		if FK.IsSecret(realm) then
+			realm = nil
+		end
+	end
+	return Roster.PlayerKey(name, realm)
 end
 
 function Roster:Upsert(name, fields)
@@ -51,13 +69,17 @@ function Roster:ScanGroup()
 
 	local seen = {}
 	local members = GetNumGroupMembers() or 0
-	local unitPrefix = IsInRaid and IsInRaid() and "raid" or "party"
+	local inRaid = IsInRaid and IsInRaid()
+	local unitPrefix = inRaid and "raid" or "party"
 
 	local function add(unit)
 		if not UnitExists(unit) then
 			return
 		end
-		local name, realm = UnitName(unit)
+		local ok, name, realm = pcall(UnitName, unit)
+		if not ok then
+			return
+		end
 		local key = Roster.PlayerKey(name, realm)
 		if key then
 			seen[key] = true
@@ -67,7 +89,9 @@ function Roster:ScanGroup()
 	end
 
 	add("player")
-	for index = 1, math.max(members - 1, 0) do
+	-- raid1..raidN covers the whole raid including you, while party1..partyN-1
+	-- does not cover you. Counting raids like parties left the last member out.
+	for index = 1, inRaid and members or math.max(members - 1, 0) do
 		add(unitPrefix .. index)
 	end
 

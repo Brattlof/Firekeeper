@@ -144,8 +144,6 @@ function Discovery.Position()
 	return { uiMapID = uiMapID, x = x, y = y }
 end
 
-local isSecret = _G.issecretvalue or function() return false end
-
 --- Which layer of a layered realm we are standing on, and the kind of unit it
 -- came from, or nil.
 --
@@ -167,7 +165,7 @@ function Discovery.Layer()
 			and not (UnitIsPlayer and UnitIsPlayer(unit))
 			and not (UnitPlayerControlled and UnitPlayerControlled(unit)) then
 			local ok, guid = pcall(UnitGUID, unit)
-			if ok and not isSecret(guid) then
+			if ok and not FK.IsSecret(guid) then
 				local layer = FK.CampList.LayerFromGuid(guid)
 				if layer then
 					return layer, tostring(guid):match("^([^-]+)")
