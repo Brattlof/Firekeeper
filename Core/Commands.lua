@@ -14,6 +14,7 @@ local function usage()
 		"|cffffff00/fk announce|r — post the camp to party or say",
 		"|cffffff00/fk find [n]|r — camps other people are hosting; a number sets a waypoint",
 		"|cffffff00/fk host|r — tell people where this fire is, or stop",
+		"|cffffff00/fk guild [share]|r — guildies nearby; `share` toggles sharing your own spot",
 		"|cffffff00/fk buffs [key]|r — class buffs your group is missing; a key toggles an optional one",
 		"|cffffff00/fk cd|r — cooldowns for your characters",
 		"|cffffff00/fk prof <name> <skill>|r — set a profession by hand",
@@ -226,6 +227,30 @@ function handlers.host()
 		FK.Print("hosting: people running Firekeeper can now find this fire.")
 	else
 		FK.Print("|cffff4040%s|r", err)
+	end
+end
+
+function handlers.guild(rest)
+	rest = (rest or ""):gsub("^%s*(.-)%s*$", "%1"):lower()
+
+	if rest == "share" then
+		local on = FK.Discovery:SetSharing(not FK.db.shareWithGuild)
+		FK.Print("sharing your position with the guild is now %s.", on and "on" or "off")
+		return
+	end
+
+	local guildies = FK.Discovery.Guildies()
+	if #guildies == 0 then
+		FK.Print("no guildies are sharing their position.")
+	else
+		FK.Print("guildies running Firekeeper:")
+		for _, entry in ipairs(guildies) do
+			FK.Print("  %s", FK.Nearby.Line(entry, FK.Discovery.ZoneName(entry.uiMapID)))
+		end
+	end
+
+	if not FK.db.shareWithGuild then
+		FK.Print("|cff888888you are not sharing yours. |cffffff00/fk guild share|r|cff888888 turns it on.|r")
 	end
 end
 

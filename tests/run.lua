@@ -26,6 +26,7 @@ for _, file in ipairs({
 	"Core/Plan.lua",
 	"Core/Buffs.lua",
 	"Core/CampList.lua",
+	"Core/Nearby.lua",
 	"Core/Cooldowns.lua",
 }) do
 	loadAddonFile(file)
@@ -54,7 +55,7 @@ function t.count(list, expected, message)
 	return t.equals(#list, expected, message)
 end
 
-local suites = { "data_test", "plan_test", "buffs_test", "camplist_test", "cooldowns_test" }
+local suites = { "data_test", "plan_test", "buffs_test", "camplist_test", "nearby_test", "cooldowns_test" }
 
 for _, suite in ipairs(suites) do
 	local chunk = assert(loadfile(root .. "/tests/" .. suite .. ".lua"))

@@ -27,6 +27,9 @@ local defaults = {
 		fieldGuide = 0, -- shortens the shared object cooldown
 		permanence = 0, -- lengthens camp buffs
 	},
+	-- Off by default: a position is the one genuinely personal thing this
+	-- addon can broadcast, so `/fk guild share` has to ask for it.
+	shareWithGuild = false,
 	-- Class buffs that are off until asked for, by `/fk buffs <key>`.
 	optionalBuffs = {},
 	-- Per character: when this character last contributed an object.
