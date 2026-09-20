@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.3.0 — 20 September 2026
+
 - **Clicking an object on the Place tab now actually places it.** The buttons are secure
   action buttons pointed at the item, so your own click uses it — an addon cannot use an
   item for you, but a button you press yourself can. The "place what is suggested" button
@@ -18,6 +20,16 @@
   protected buttons, and comes back the moment combat ends.
 - Horde players get the Horde Faction Banner, which is a different item with a different
   spell from the Alliance one.
+
+**Known limits, unchanged**
+
+- This beta build writes saved settings but never reads them back, so professions, Legacy
+  ranks and alt cooldowns start fresh each session. The addon says so at login.
+- Nothing in the group-sharing half has been confirmed to reach another player.
+- Whether the client lets an addon's button use an item is the least proven thing here:
+  no Blizzard code in the 1.60.1 interface sets that attribute at all. `/fk caps` shows
+  `secureButtons`, and if it does not work the panel records placements instead and says
+  so rather than pretending.
 
 ## 0.2.1 — 20 September 2026
 
