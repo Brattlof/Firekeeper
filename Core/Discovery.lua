@@ -113,7 +113,8 @@ end
 
 local isSecret = _G.issecretvalue or function() return false end
 
---- Which layer of a layered realm we are standing on, or nil.
+--- Which layer of a layered realm we are standing on, and the kind of unit it
+-- came from, or nil.
 --
 -- A player's own GUID does not carry the layer, so it has to be read off some
 -- non-player unit nearby. Nothing here is guaranteed: `UnitGUID` is marked
@@ -136,7 +137,7 @@ function Discovery.Layer()
 			if ok and not isSecret(guid) then
 				local layer = FK.CampList.LayerFromGuid(guid)
 				if layer then
-					return layer
+					return layer, tostring(guid):match("^([^-]+)")
 				end
 			end
 		end
@@ -275,14 +276,27 @@ end
 --- Camps we have heard about lately, nearest first, with our own layer
 -- attached so the panel can say which of them you could actually walk to.
 function Discovery.Found()
-	local layer = Discovery.Layer()
+	local layer, fromUnit = Discovery.Layer()
 	FK.Diag("layer", layer or "not readable")
+	FK.Diag("layerFromUnitType", fromUnit or "none")
 
 	local found = FK.CampList.Active(now(), Discovery.Position())
 	for _, camp in ipairs(found) do
-		-- Only claim a different layer when both ends know theirs. Unknown is
-		-- not the same as elsewhere.
-		camp.otherLayer = (layer ~= nil and camp.layer ~= nil and camp.layer ~= layer) or false
+		-- Three conditions, and all of them matter:
+		--
+		--   both ends know their own number — unknown is not elsewhere;
+		--   the numbers differ;
+		--   and the camp is on the same map as us.
+		--
+		-- That last one is the subtle one. The number is a GUID's zoneUID, which
+		-- varies by zone as well as by shard, so our number in one zone and a
+		-- host's in another would differ even on the same shard. Comparing them
+		-- across maps would invent an obstacle that is not there
+		-- (docs/RESEARCH.md, FK-15).
+		camp.otherLayer = (camp.sameMap
+			and layer ~= nil
+			and camp.layer ~= nil
+			and camp.layer ~= layer) or false
 	end
 	return found
 end
