@@ -107,9 +107,13 @@ function Buffs.ObservedCoverage(members)
 	local covered = {}
 	for _, member in ipairs(members or {}) do
 		for aura in pairs(member.auras or {}) do
-			local buff = FK.Data.ClassBuffForAura(aura)
-			if buff and buff.buffGroup then
-				covered[buff.buffGroup] = covered[buff.buffGroup] or aura
+			-- Straight from Data/BuffGroups.lua, which names the exact spell each
+			-- camp buff is exclusive with. Going through the "buffs worth asking
+			-- for" table instead is what made every paladin blessing look like
+			-- Blessing of Might.
+			local group = FK.Data.BuffGroupForAura(aura)
+			if group then
+				covered[group] = covered[group] or aura
 			end
 		end
 	end

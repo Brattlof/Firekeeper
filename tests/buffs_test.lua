@@ -113,6 +113,63 @@ function tests.fortitude_covers_the_camp_stamina_buff()
 	t.equals(covered.stamina, "Prayer of Fortitude", "the group version covers it too")
 end
 
+function tests.a_blessing_only_covers_what_that_blessing_gives()
+	-- The bug: every one of a paladin's twelve blessings was mapped to Attack
+	-- Power, so a paladin running Salvation made the planner drop the Lodestone
+	-- and the camp went without its Attack Power buff.
+	local salvation = Buffs.ObservedCoverage({ member("Ana", "PALADIN", { "Blessing of Salvation" }) })
+	t.equals(salvation.attack_power, nil, "Salvation is not Attack Power")
+
+	local might = Buffs.ObservedCoverage({ member("Ana", "PALADIN", { "Greater Blessing of Might" }) })
+	t.equals(might.attack_power, "Greater Blessing of Might", "Might is, and so is its group version")
+
+	local wisdom = Buffs.ObservedCoverage({ member("Ana", "PALADIN", { "Blessing of Wisdom" }) })
+	t.equals(wisdom.mana_regen, "Blessing of Wisdom", "Wisdom covers the Mana Well instead")
+	t.equals(wisdom.attack_power, nil, "and nothing else")
+
+	local kings = Buffs.ObservedCoverage({ member("Ana", "PALADIN", { "Blessing of Kings" }) })
+	t.equals(kings.all_stats, "Blessing of Kings", "Kings covers the Fish Bowl")
+end
+
+function tests.every_camp_buff_can_be_covered_by_an_observed_aura()
+	-- The other half of the bug: five of the nine groups had no aura wired to
+	-- them, so once the client let us read auras the planner got *worse* — it
+	-- would suggest a Sharpening Wheel next to a shaman already running Strength
+	-- of Earth Totem. Every group a camp object uses must be reachable.
+	local used = {}
+	for _, object in ipairs(FK.Data.campObjects) do
+		local group = FK.Data.EffectiveBuff(object)
+		if group then used[group] = object.name end
+	end
+
+	for group, objectName in pairs(used) do
+		local reachable = false
+		for aura, key in pairs(FK.Data.buffGroupByAura) do
+			if key == group then reachable = true end
+			local _ = aura
+		end
+		t.isTrue(reachable, group .. " (" .. objectName .. ") can be covered by an aura")
+	end
+end
+
+function tests.each_group_is_reachable_by_its_own_class_buff()
+	local cases = {
+		{ "Strength of Earth Totem", "strength" },
+		{ "Mark of the Wild", "armor" },
+		{ "Gift of the Wild", "armor" },
+		{ "Moonkin Aura", "crit" },
+		{ "Blessing of Wisdom", "mana_regen" },
+		{ "Blessing of Kings", "all_stats" },
+		{ "Arcane Brilliance", "intellect" },
+		{ "Prayer of Spirit", "spirit" },
+		{ "Battle Shout", "attack_power" },
+	}
+	for _, case in ipairs(cases) do
+		t.equals(FK.Data.BuffGroupForAura(case[1]), case[2], case[1] .. " covers " .. case[2])
+	end
+	t.equals(FK.Data.BuffGroupForAura("Inner Fire"), nil, "a self buff covers no camp object")
+end
+
 function tests.observed_coverage_ignores_players_we_could_not_read()
 	local covered = Buffs.ObservedCoverage({ member("Ana", "MAGE", nil) })
 	t.equals(covered.intellect, nil, "an unread mage proves nothing")
