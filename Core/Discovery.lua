@@ -57,12 +57,23 @@ end
 -- `JoinChannelByName` is preferred over `JoinPermanentChannel`: the permanent
 -- one is written into the player's chat settings and can take the /1 slot,
 -- which is not ours to spend.
-function Discovery:Channel()
+function Discovery:Channel(fromUserAction)
 	if self.channelIndex then
 		return self.channelIndex
 	end
 	if not FK.Capabilities.Has("customChannel") then
 		return nil
+	end
+
+	-- Everything that sends goes through here, including the host ticker and the
+	-- reply to a SEEK, so the guard has to be here rather than at the call the
+	-- player typed. Without it one failed join meant the next ticker tried again
+	-- from a C_Timer callback, which is exactly what this is supposed to avoid.
+	if not fromUserAction then
+		return nil
+	end
+	if self.joinFailed then
+		return nil -- do not hammer a join that already came back empty
 	end
 
 	if type(_G.JoinChannelByName) == "function" then
@@ -77,8 +88,17 @@ function Discovery:Channel()
 		FK.Diag("campChannel", index)
 		return index
 	end
+	self.joinFailed = true
 	FK.Diag("campChannel", "join failed")
 	return nil
+end
+
+--- Forgets the channel, so the next thing the player types joins again.
+-- Called when a send is refused with a channel error: the index is cached and
+-- the player may have left the channel or had it renumbered underneath us.
+function Discovery:ForgetChannel()
+	self.channelIndex = nil
+	self.joinFailed = false
 end
 
 --- Sends on the camp channel.
@@ -92,7 +112,7 @@ local function send(message, fromTimer)
 	if not outgoingAllowed() then
 		return false
 	end
-	local index = Discovery:Channel()
+	local index = Discovery:Channel(not fromTimer)
 	if not index then
 		if fromTimer and not recordedTimerSend then
 			recordedTimerSend = true
@@ -115,6 +135,11 @@ local function send(message, fromTimer)
 	if not FK.Comm.WasSent(result) then
 		FK.Debug("channel message not sent, result %s",
 			FK.Comm.enumName(Enum and Enum.SendAddonMessageResult, result))
+		local invalid = Enum and Enum.SendAddonMessageResult
+			and Enum.SendAddonMessageResult.InvalidChannel
+		if invalid and result == invalid then
+			Discovery:ForgetChannel()
+		end
 		return false
 	end
 	return true
@@ -207,14 +232,20 @@ function Discovery:StartHosting()
 		return false, "the game will not say where you are: step outside and try again"
 	end
 	self.hosting = true
-	self:Broadcast(true)
+	local announced = self:Broadcast(true)
 
 	if C_Timer and C_Timer.NewTicker and not self.ticker then
-		self.ticker = C_Timer.NewTicker(self.HOST_INTERVAL, function()
+		-- A shade under the throttle window: a tick landing a hair early used to
+		-- be dropped, pushing the next announce out to 180 seconds.
+		self.ticker = C_Timer.NewTicker(self.HOST_INTERVAL + 1, function()
 			if Discovery.hosting then
 				Discovery:Broadcast(false, true)
 			end
 		end)
+	end
+
+	if not announced then
+		return false, "could not announce this fire: nothing was sent"
 	end
 	return true
 end
@@ -264,12 +295,18 @@ function Discovery:OnMessage(kind, rest, sender)
 			end
 		end
 	elseif kind == "SEEK" then
-		-- Answer only if we are hosting: a seeker asking an empty field gets
-		-- silence rather than a round of "not me" from everyone online.
-		--
+		-- Answer only if we are hosting, and only if the seeker is asking about
+		-- the map we are on. The map id was being parsed nowhere, so every host
+		-- on the realm answered every `/fk find` on the realm — an N times M
+		-- storm that throttled away the answers that mattered.
+		local wanted = tonumber(tostring(rest):match("^(%d+)"))
+		local position = Discovery.Position()
+		local sameMap = wanted == nil or position == nil or wanted == 0
+			or wanted == position.uiMapID
+
 		-- This reply comes from an event handler rather than from anything the
 		-- player did, so it is in the same boat as the ticker (FK-19).
-		if self.hosting then
+		if self.hosting and sameMap then
 			self:Broadcast(true, true)
 		end
 	elseif kind == "PACK" then
@@ -451,8 +488,9 @@ function Discovery:OnLogin()
 
 	-- Deliberately not joining the channel here. See Discovery:Channel.
 
-	-- Sharing survives a reload, so somebody who turned it on does not have to
-	-- turn it on again every time.
+	-- Restored if the client ever hands saved variables back. On this build it
+	-- never does (docs/RESEARCH.md, FK-9), so sharing starts off every session —
+	-- which is the safe direction for a setting that broadcasts your position.
 	if FK.db and FK.db.shareWithGuild then
 		Discovery:SetSharing(true)
 	end

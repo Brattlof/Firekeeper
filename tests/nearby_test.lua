@@ -74,6 +74,14 @@ function tests.indoors_everyone_is_still_listed()
 	t.equals(active[1].sameMap, false, "or whether it is even the same map")
 end
 
+function tests.standing_on_someone_reads_like_english()
+	-- It used to say "Bo — right here of here".
+	t.equals(Nearby.Line({ name = "Bo", sameMap = true, direction = "right here" }),
+		"Bo — right here", "with no distance")
+	t.equals(Nearby.Line({ name = "Bo", sameMap = true, yards = 0.4, direction = "right here" }),
+		"Bo — right here", "and with one")
+end
+
 function tests.the_line_reads_like_a_sentence()
 	t.equals(Nearby.Line({ name = "Ana", sameMap = true, yards = 140.4, direction = "north-east" }),
 		"Ana — 140 yards north-east", "same map, with a distance")
