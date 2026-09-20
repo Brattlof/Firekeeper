@@ -34,7 +34,9 @@ local function build()
 	}
 	FK.Comm = { Announce = function() end, PREFIX = "FKPR1" }
 	FK.Capabilities = {
-		Has = function() return true end,
+		results = { addonComm = true, unitAuras = true, mapPosition = false },
+		Has = function(name) return FK.Capabilities.results[name] == true end,
+		Limitations = function() return { "no saved settings came back from the client" } end,
 		Report = function() return { "Firekeeper test on client 1.60.1 (interface 16001)" } end,
 	}
 	FK.Professions = {
@@ -284,6 +286,41 @@ function tests.a_profession_can_be_set_without_a_command()
 	you.professionSkill:SetText("145")
 	you.professionSkill.__scripts.OnEnterPressed()
 	t.equals(FK.Professions.known[chosen], 145, "setting " .. chosen .. " took")
+end
+
+function tests.a_number_box_is_not_wiped_while_you_type_in_it()
+	-- The panel refreshes every five seconds whether or not you are mid-rank.
+	local FK, panel = build()
+	panel.strip:Select("You")
+	FK.UI:Refresh()
+
+	local row = panel.tabFrames.You.fieldGuide
+	local box = row.box
+	t.isTrue(box, "the Field Guide row exposes its box")
+
+	-- Not typing: the box tracks the stored value.
+	FK.db.legacy.fieldGuide = 2
+	row:Refresh()
+	t.equals(box:GetText(), "2", "it shows the stored rank")
+
+	-- Typing: a refresh must leave what is being entered alone.
+	box:SetFocus()
+	box:SetText("3")
+	row:Refresh()
+	t.equals(box:GetText(), "3", "the half-typed rank survived a refresh")
+
+	box:ClearFocus()
+	row:Refresh()
+	t.equals(box:GetText(), "2", "and it tracks the stored value again once you leave")
+end
+
+function tests.the_client_summary_fits_on_the_tab()
+	-- The full capability list ran past the space available and was cut off
+	-- with no scrollbar, hiding the saved-variables warning with it.
+	local FK, panel = build()
+	panel.strip:Select("You")
+	FK.UI:Refresh()
+	t.count(FK.debugLines, 0, "the You tab drew: " .. table.concat(FK.debugLines, " | "))
 end
 
 function tests.the_panel_remembers_where_it_was_dragged()

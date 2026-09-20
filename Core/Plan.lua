@@ -204,9 +204,14 @@ function Plan.Evaluate(state)
 	}
 end
 
--- Every camp buff, and which object gives it. Built once, because the answer
--- cannot change while the addon is loaded.
+-- Every camp buff, and which object gives it. Worked out on the first call and
+-- kept, because the answer cannot change while the addon is loaded — the
+-- comment used to claim this without the table that made it true.
+local providerCache
 local function buffProviders()
+	if providerCache then
+		return providerCache
+	end
 	local providers = {}
 	for _, object in ipairs(FK.Data.campObjects) do
 		local group = FK.Data.EffectiveBuff(object)
@@ -215,6 +220,7 @@ local function buffProviders()
 			table.insert(providers[group], object)
 		end
 	end
+	providerCache = providers
 	return providers
 end
 

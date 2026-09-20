@@ -57,8 +57,31 @@ function Auras.ReadUnit(unit)
 	return names
 end
 
+-- A refresh asks for coverage several times over — the header plans, then the
+-- tab plans, then the tab asks again for its own reasons — and each ask used to
+-- re-read up to forty auras per group member. In a forty-man that is thousands
+-- of pcalled API calls every five seconds for an answer that cannot have
+-- changed. One second of memory removes all of it.
+local CACHE_SECONDS = 1
+local cached, cachedAt = nil, -1
+
 --- The group as Core/Buffs.lua wants it: name, class, level and auras.
 function Auras:Snapshot()
+	local now = GetTime and GetTime() or 0
+	if cached and (now - cachedAt) < CACHE_SECONDS then
+		return cached
+	end
+	local members = self:ReadSnapshot()
+	cached, cachedAt = members, now
+	return members
+end
+
+--- Forces the next Snapshot to read the client again.
+function Auras:Invalidate()
+	cached, cachedAt = nil, -1
+end
+
+function Auras:ReadSnapshot()
 	local members, stale, seen = {}, false, {}
 
 	-- `isSelf` is passed in rather than asked of UnitIsUnit, which is marked

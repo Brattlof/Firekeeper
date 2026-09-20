@@ -26,6 +26,17 @@ local function colored(hex, text)
 	return ("|cff%s%s|r"):format(hex, text)
 end
 
+--- What a given player is being told to place, read off a plan we already have
+-- rather than by planning the camp again.
+local function suggestionFor(plan, player)
+	for _, suggestion in ipairs(plan.suggestions) do
+		if suggestion.player == player then
+			return suggestion
+		end
+	end
+	return nil
+end
+
 -- Rows ------------------------------------------------------------------
 
 --- A reusable list of single-line labels inside a content frame. Every tab
@@ -83,8 +94,8 @@ local function updatePips(frame, used, capacity)
 	for index = 1, math.max(capacity, #frame.pips) do
 		if index <= capacity then
 			local holder = pip(frame, index)
-			local color = index <= used and FK.Theme.colors.ember or FK.Theme.colors.ash
-			holder.fill:SetColorTexture(color[1], color[2], color[3], 1)
+			FK.Theme.Recolor(holder.fill,
+				index <= used and FK.Theme.colors.ember or FK.Theme.colors.ash)
 			holder:Show()
 		elseif frame.pips[index] then
 			frame.pips[index]:Hide()
@@ -117,8 +128,7 @@ local function buildCampTab(parent)
 	place:SetPoint("BOTTOMRIGHT", 0, 0)
 	tab.placeButton = place
 
-	function tab:Refresh()
-		local plan = FK.Camp:Plan()
+	function tab:Refresh(plan)
 		local lines = {}
 
 		for _, entry in ipairs(FK.Camp.placed) do
@@ -165,9 +175,9 @@ local function buildCampTab(parent)
 			lines = { colored("8a8a8a", "Nobody at this fire has said what they can place.") }
 		end
 
-		local suggestion = FK.Camp:SuggestionForSelf()
 		FK.Theme.SetTextColor(place.text,
-			suggestion and FK.Theme.colors.text or FK.Theme.colors.smoke)
+			suggestionFor(plan, FK.Roster.SelfKey()) and FK.Theme.colors.text
+				or FK.Theme.colors.smoke)
 
 		list:Set(lines)
 	end
@@ -265,9 +275,8 @@ local function buildPlaceTab(parent)
 		x = x + 96
 	end
 
-	function tab:Refresh()
+	function tab:Refresh(plan)
 		local objects = FK.Professions:PlaceableObjects()
-		local plan = FK.Camp:Plan()
 		local selfKey = FK.Roster.SelfKey()
 
 		local covered = FK.Roster:Coverage()
@@ -291,7 +300,7 @@ local function buildPlaceTab(parent)
 		end
 
 		local readyIn = FK.Cooldowns.ForCharacter(selfKey, time and time() or 0)
-		local suggestion = FK.Camp:SuggestionForSelf()
+		local suggestion = suggestionFor(plan, selfKey)
 
 		heading:SetText(#objects > 0
 			and ("What you can place (%d/%d slots used)"):format(plan.used, plan.capacity)
@@ -343,7 +352,7 @@ local function buildPlaceTab(parent)
 				end
 
 				for _, line in pairs(button.edges) do
-					line:SetColorTexture(tint[1], tint[2], tint[3], 1)
+					FK.Theme.Recolor(line, tint)
 				end
 				button.reason = reason
 				button.icon:SetDesaturated(not button.placeable)
@@ -378,7 +387,6 @@ local function buildBuffsTab(parent)
 	local list = lineList(tab)
 
 	function tab:Refresh()
-		FK.Roster:ScanGroup()
 		local report = FK.Plan.BuffReport({
 			placed = FK.Camp.placed,
 			covered = FK.Roster:Coverage(),
@@ -611,17 +619,17 @@ local function buildYouTab(parent)
 	label:SetPoint("LEFT", 0, 0)
 	label:SetText("Set a profession")
 
-	local name = FK.Theme.Button(setter, FK.Data.professions[chosen], 104, nil)
-	name:SetHeight(18)
-	name:SetPoint("LEFT", 104, 0)
-	name:SetScript("OnClick", function()
+	local professionButton = FK.Theme.Button(setter, FK.Data.professions[chosen], 104, nil)
+	professionButton:SetHeight(18)
+	professionButton:SetPoint("LEFT", 104, 0)
+	professionButton:SetScript("OnClick", function()
 		chosen = chosen % #FK.Data.professions + 1
-		name.text:SetText(FK.Data.professions[chosen])
+		professionButton.text:SetText(FK.Data.professions[chosen])
 	end)
 
 	local skill = CreateFrame("EditBox", nil, setter)
 	skill:SetSize(40, 18)
-	skill:SetPoint("LEFT", name, "RIGHT", 6, 0)
+	skill:SetPoint("LEFT", professionButton, "RIGHT", 6, 0)
 	skill:SetAutoFocus(false)
 	skill:SetNumeric(true)
 	skill:SetMaxLetters(3)
@@ -652,7 +660,7 @@ local function buildYouTab(parent)
 	apply:SetHeight(18)
 	apply:SetPoint("LEFT", skill, "RIGHT", 6, 0)
 	tab.professionSetter = setter
-	tab.professionName = name
+	tab.professionName = professionButton
 	tab.professionSkill = skill
 
 	tab.listTop = y
@@ -688,8 +696,35 @@ local function buildYouTab(parent)
 
 		table.insert(lines, " ")
 		table.insert(lines, colored("fad161", "This client"))
-		for _, line in ipairs(FK.Capabilities.Report()) do
-			table.insert(lines, "  " .. line)
+
+		-- Only what is refused, plus a count. The full list ran to two dozen
+		-- lines and was silently cut off by the space available; `/fk caps`
+		-- still prints all of it, and it is written to the saved variables
+		-- either way.
+		local refused, total = {}, 0
+		for name in pairs(FK.Capabilities.results) do
+			total = total + 1
+			if not FK.Capabilities.Has(name) then
+				table.insert(refused, name)
+			end
+		end
+		table.sort(refused)
+
+		if total == 0 then
+			table.insert(lines, colored("8a8a8a", "  not probed yet"))
+		elseif #refused == 0 then
+			table.insert(lines, colored("73d957",
+				("  all %d checks passed"):format(total)))
+		else
+			table.insert(lines, colored("8a8a8a",
+				("  %d of %d checks passed. Not allowed here:"):format(total - #refused, total)))
+			for _, name in ipairs(refused) do
+				table.insert(lines, colored("ff5450", "    " .. name))
+			end
+		end
+
+		for _, limitation in ipairs(FK.Capabilities.Limitations()) do
+			table.insert(lines, colored("8a8a8a", "  " .. limitation))
 		end
 
 		local unknown = FK.Data.UnknownEffects()
@@ -775,15 +810,26 @@ function UI:Refresh()
 		return
 	end
 
+	-- Planned once here and handed to the tab. Each tab used to plan again, and
+	-- `SuggestionForSelf` a third time, so a single refresh re-planned the camp
+	-- three times and re-read every unit's auras with it.
 	local plan = FK.Camp:Plan()
 	frame.header:SetText(("%d of %d slots used"):format(plan.used, plan.capacity))
 	updatePips(frame, plan.used, plan.capacity)
 
-	local current = frame.tabFrames[frame.strip.selected]
+	local tabName = frame.strip.selected
+	local current = frame.tabFrames[tabName]
 	if current and current.Refresh then
-		local ok, err = pcall(current.Refresh, current)
+		local ok, err = pcall(current.Refresh, current, plan)
 		if not ok then
-			FK.Debug("the %s tab failed to draw: %s", tostring(frame.strip.selected), tostring(err))
+			FK.Debug("the %s tab failed to draw: %s", tostring(tabName), tostring(err))
+			-- Debug is off by default, so without this a broken tab shows stale
+			-- content and says nothing at all. Once per tab, not every tick.
+			frame.reportedFailure = frame.reportedFailure or {}
+			if not frame.reportedFailure[tabName] then
+				frame.reportedFailure[tabName] = true
+				FK.Print("|cffff4040the %s tab hit an error and may be out of date|r", tabName)
+			end
 		end
 	end
 end
@@ -810,17 +856,6 @@ function UI:Toggle()
 		self.frame:Show()
 		FK.Comm:Announce(true)
 		self:Refresh()
-	end
-end
-
---- Opens the panel on a particular tab, for a slash command that has a panel
--- equivalent.
-function UI:Open(tab)
-	if not self.frame or not self.frame:IsShown() then
-		self:Toggle()
-	end
-	if self.frame and tab and self.frame.strip then
-		self.frame.strip:Select(tab)
 	end
 end
 
