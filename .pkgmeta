@@ -9,3 +9,12 @@ ignore:
   - CONTRIBUTING.md
   - docs
   - tests
+  # Development tooling. `.claude` carries the ponytail plugin as a git
+  # submodule, so without this a release zip redistributes someone else's whole
+  # repository to every player alongside our agents, hooks and skills.
+  - .claude
+  - CLAUDE.md
+  - .gitattributes
+  - .gitignore
+  - .gitmodules
+  - .pkgmeta
