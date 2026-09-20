@@ -72,6 +72,14 @@ local function send(message)
 		end
 		return false
 	end
+	if #message > FK.Wire.MAX_PAYLOAD then
+		-- Belt and braces: the encoders pack to fit, so reaching here is a bug
+		-- rather than a big character, and it should be loud in the record.
+		FK.Debug("refusing to send %d bytes, over the %d limit", #message, FK.Wire.MAX_PAYLOAD)
+		FK.Diag("oversizeMessage", ("%d bytes: %s"):format(#message, message:sub(1, 40)))
+		return false
+	end
+
 	-- A throw means the API is unusable here. Throttling, lockdown and the like come
 	-- back as a result code instead, and only mean this one message did not go.
 	local ok, result = pcall(C_ChatInfo.SendAddonMessage, Comm.PREFIX, message, target)
@@ -100,8 +108,18 @@ end
 -- HELLO:version
 -- OBJ:version|id,id,id|readyIn
 -- CAMP:slots|objectId,objectId
+--
+-- The id list is packed to fit: over 255 bytes the client answers
+-- `InvalidMessage` and the message simply never goes, which used to happen to
+-- every character with two maxed professions. See Core/Wire.lua.
 local function encodeObjects(ids, readyIn)
-	return ("OBJ:%s|%s|%d"):format(FK.version, table.concat(ids or {}, ","), math.floor(readyIn or 0))
+	local cooldown = math.floor(readyIn or 0)
+	local overhead = #("OBJ:%s||%d"):format(FK.version, cooldown)
+	local packed, dropped = FK.Wire.PackIds(ids, overhead)
+	if dropped > 0 then
+		FK.Debug("OBJ list trimmed by %d to fit the message limit", dropped)
+	end
+	return ("OBJ:%s|%s|%d"):format(FK.version, table.concat(packed, ","), cooldown)
 end
 
 local function decode(message)
@@ -136,7 +154,14 @@ function Comm:AnnounceCamp(camp)
 	for _, entry in ipairs(camp.placed or {}) do
 		table.insert(placedIds, entry.objectId)
 	end
-	send(("CAMP:%d|%s"):format(camp.slots or FK.Plan.DEFAULT_SLOTS, table.concat(placedIds, ",")))
+
+	-- A ten-slot fire full of long ids overflows too, so this is packed the same
+	-- way. Nothing is dropped as superseded here: these are objects actually on
+	-- the fire, and each one is a fact rather than an offer.
+	local slots = camp.slots or FK.Plan.DEFAULT_SLOTS
+	local overhead = #("CAMP:%d|"):format(slots)
+	local packed = FK.Wire.Fit(placedIds, FK.Wire.MAX_PAYLOAD - overhead)
+	send(("CAMP:%d|%s"):format(slots, table.concat(packed, ",")))
 end
 
 function Comm:OnMessage(message, sender)

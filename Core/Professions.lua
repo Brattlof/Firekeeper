@@ -64,7 +64,14 @@ function Professions:PlaceableObjects()
 	local placeable = {}
 	for profession, skill in pairs(self.known) do
 		for _, object in ipairs(FK.Data.campObjectsByProfession[profession] or {}) do
-			if not object.skill or skill >= object.skill then
+			-- An object with no stated skill used to be included on the grounds
+			-- that offering too much beats hiding something. Now that every
+			-- object carries its requirement, the only ones left without are the
+			-- upgraded campfire kits, which need a blueprint — and claiming a
+			-- ten-slot fire you cannot build makes the planner promise a camp
+			-- that never appears.
+			local reachable = object.skill and skill >= object.skill
+			if reachable or (not object.skill and object.source ~= "blueprint") then
 				table.insert(placeable, object)
 			end
 		end

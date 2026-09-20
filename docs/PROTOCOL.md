@@ -59,6 +59,12 @@ is how a player learns that their addon is out of date.
   while sharing with the guild (`/fk guild share`, to the guild and nobody else).
 - Positions are sent as whole basis points, not floats, which keeps a message short and
   lands within a couple of yards.
+- The `OBJ` and `CAMP` id lists are packed to fit the 255-byte payload, because the client
+  answers `InvalidMessage` for anything longer and the message simply never goes. Packing
+  drops any object another offered object supersedes first — an Anvil already covers a
+  Sharpening Wheel, so that costs the planner nothing — and only truncates if that is not
+  enough. A character with three maxed primaries needs the first step; all twelve
+  professions needs both.
 - `HOST` carries the sender's layer so a seeker is not walked to coordinates on a shard
   they cannot reach. A reader that predates the field still parses the rest, and a camp
   is only called "on another layer" when both ends know their own — unknown is not the
