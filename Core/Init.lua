@@ -1,7 +1,24 @@
 local addonName, FK = ...
 
 FK.name = addonName
-FK.version = C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(addonName, "Version") or "dev"
+
+--- The addon's version, or "dev" when there is not a real one.
+--
+-- `## Version: @project-version@` in the .toc is a token the packager
+-- substitutes at release time. Run from a git checkout it arrives literally,
+-- and it was going into `/fk caps`, every bug report and the `OBJ` message on
+-- the wire — where a version string nobody can compare is worse than admitting
+-- this is a working copy.
+local function addonVersion()
+	local version = C_AddOns and C_AddOns.GetAddOnMetadata
+		and C_AddOns.GetAddOnMetadata(addonName, "Version")
+	if type(version) ~= "string" or version == "" or version:find("@", 1, true) then
+		return "dev"
+	end
+	return version
+end
+
+FK.version = addonVersion()
 
 local PREFIX = "|cffff8a3dFirekeeper|r: "
 
