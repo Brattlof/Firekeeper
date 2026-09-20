@@ -9,8 +9,8 @@ local _, t, root = ...
 local Mock = dofile(root .. "/tests/wowmock.lua")
 local tests = {}
 
-local function build()
-	local state = Mock.install({ count = 0 })
+local function build(world)
+	local state = Mock.install(world or { count = 0 })
 	local FK = Mock.newFK()
 
 	for _, file in ipairs({
@@ -107,8 +107,14 @@ function tests.the_panel_draws_at_all()
 	t.isTrue(panel, "the panel was created")
 	t.equals(FK.diagnostics.panel, "drawn", "and recorded that it drew")
 	t.isTrue(state.counters.frames > 20, "it built frames: " .. state.counters.frames)
-	-- The addon's whole look is its own, so FK-6 cannot gate whether it appears.
-	t.equals(state.counters.templates, 0, "and used no Blizzard template")
+	-- The addon's look is entirely its own, so FK-6 cannot gate whether the
+	-- panel appears. The single template it does use is SecureActionButton,
+	-- which is there for behaviour rather than appearance — using an item is
+	-- protected — and the panel builds without it, as the fallback test shows.
+	for name in pairs(state.counters.templateNames) do
+		t.equals(name, "SecureActionButtonTemplate",
+			"the only template used is the secure one, not " .. name)
+	end
 end
 
 function tests.every_tab_draws_twice_without_complaint()
@@ -135,9 +141,61 @@ function tests.the_place_grid_offers_what_you_can_place()
 	t.isTrue(place.buttons[1].object, "and each carries its object")
 
 	place.buttons[1].__scripts.OnEnter()
-	place.buttons[1].__scripts.OnClick()
+	place.buttons[1].__scripts.PostClick()
 	place.buttons[1].__scripts.OnLeave()
 	t.count(FK.debugLines, 0, "clicking one raised nothing")
+end
+
+function tests.a_placeable_object_points_its_button_at_the_item()
+	-- Using an item is protected, so the button has to be a secure one with the
+	-- item on an attribute; the player's own click does the using.
+	local FK, panel = build()
+	FK.Camp.placed = {} -- the default fixture has you already contributing
+	panel.strip:Select("Place")
+	FK.UI:Refresh()
+
+	local button
+	for _, candidate in ipairs(panel.tabFrames.Place.buttons) do
+		if candidate.object and candidate.placeable then
+			button = candidate
+			break
+		end
+	end
+	t.isTrue(button, "something is placeable")
+	t.isTrue(button.secure, "and its button is a secure one")
+	t.equals(button.__attributes.type, "item", "set to use an item")
+	t.equals(button.__attributes.item, "item:" .. button.object.itemId,
+		"naming the object's own item")
+end
+
+function tests.an_unplaceable_object_points_its_button_at_nothing()
+	local FK, panel = build()
+	FK.Camp.placed = { { player = "Ana", objectId = "incense_candle" } } -- you already gave one
+	panel.strip:Select("Place")
+	FK.UI:Refresh()
+
+	local button = panel.tabFrames.Place.buttons[1]
+	t.equals(button.placeable, false, "you have already contributed")
+	t.equals(button.__attributes.item, nil, "so the button uses nothing")
+end
+
+function tests.the_panel_still_works_without_secure_templates()
+	-- A client with no SecureActionButtonTemplate must still get a panel; it
+	-- just records what you tell it instead of using the item for you.
+	local FK, panel, state = build({ count = 0, noTemplates = true })
+	t.isTrue(panel, "the panel was built")
+	FK.Camp.placed = {}
+	panel.strip:Select("Place")
+	FK.UI:Refresh()
+
+	local button = panel.tabFrames.Place.buttons[1]
+	t.isTrue(button, "the grid still has buttons")
+	t.equals(button.secure, nil, "they are not secure ones")
+	t.isTrue(button.__scripts.OnClick, "and they fall back to recording the placement")
+	t.count(FK.debugLines, 0, "the tab drew: " .. table.concat(FK.debugLines, " | "))
+
+	-- And the whole panel was built without a single template.
+	t.equals(state.counters.templates, 0, "no template was used at all")
 end
 
 function tests.the_place_tab_never_contradicts_the_planner()

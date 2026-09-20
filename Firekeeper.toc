@@ -34,6 +34,7 @@ Core/Camp.lua
 Core/CampList.lua
 Core/Nearby.lua
 Core/Discovery.lua
+Core/Placement.lua
 Core/Commands.lua
 
 UI/Theme.lua

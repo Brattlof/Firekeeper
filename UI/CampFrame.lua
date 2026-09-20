@@ -116,15 +116,29 @@ local function buildCampTab(parent)
 	end)
 	announce:SetPoint("BOTTOMLEFT", 0, 0)
 
-	local place = FK.Theme.Button(tab, "Place what is suggested", 160, function()
-		local suggestion = FK.Camp:SuggestionForSelf()
-		if suggestion then
-			FK.Camp:MarkPlaced(FK.Roster.SelfKey(), suggestion.objectId)
-		else
-			FK.Print("nothing is suggested for you; the Place tab has everything you can put down.")
-		end
-		FK.UI:Refresh()
-	end)
+	-- The same secure treatment as the Place grid: a click uses the suggested
+	-- item, and Core/Placement.lua notices what actually went down.
+	local secure, place = pcall(CreateFrame, "Button", nil, tab, "SecureActionButtonTemplate")
+	if secure and place then
+		place.secure = true
+		place:RegisterForClicks("AnyUp")
+		FK.Theme.Dress(place, "Place what is suggested", 160)
+		place:SetScript("PostClick", function()
+			if FK.UI and FK.UI.Refresh then
+				FK.UI:Refresh()
+			end
+		end)
+	else
+		place = FK.Theme.Button(tab, "Place what is suggested", 160, function()
+			local suggestion = suggestionFor(FK.Camp:Plan(), FK.Roster.SelfKey())
+			if suggestion then
+				FK.Camp:MarkPlaced(FK.Roster.SelfKey(), suggestion.objectId)
+			else
+				FK.Print("nothing is suggested for you; the Place tab has everything you can put down.")
+			end
+			FK.UI:Refresh()
+		end)
+	end
 	place:SetPoint("BOTTOMRIGHT", 0, 0)
 	tab.placeButton = place
 
@@ -175,9 +189,16 @@ local function buildCampTab(parent)
 			lines = { colored("8a8a8a", "Nobody at this fire has said what they can place.") }
 		end
 
+		local mine = suggestionFor(plan, FK.Roster.SelfKey())
 		FK.Theme.SetTextColor(place.text,
-			suggestionFor(plan, FK.Roster.SelfKey()) and FK.Theme.colors.text
-				or FK.Theme.colors.smoke)
+			mine and FK.Theme.colors.text or FK.Theme.colors.smoke)
+
+		if place.secure and not (InCombatLockdown and InCombatLockdown()) then
+			local object = mine and FK.Data.GetObject(mine.objectId)
+			place:SetAttribute("type", object and "item" or nil)
+			place:SetAttribute("item", object and object.itemId
+				and ("item:" .. object.itemId) or nil)
+		end
 
 		list:Set(lines)
 	end
@@ -191,6 +212,12 @@ local ICON_SIZE, GRID_COLUMNS = 30, 5
 
 --- One object in the Place grid. Kept on the tab so the tab can hide them, but
 -- parented to the grid so they lay out inside it.
+--
+-- Built on `SecureActionButtonTemplate` where the client has it, so clicking
+-- actually uses the item and puts the object down. Using an item is a protected
+-- action: an addon cannot do it for you, but a button you click yourself can.
+-- Where the template is missing the button still works, it just records what
+-- you tell it and leaves the using to you.
 local function objectButton(tab, grid, index)
 	local existing = tab.buttons[index]
 	if existing then
@@ -198,7 +225,15 @@ local function objectButton(tab, grid, index)
 	end
 
 	local column, row = (index - 1) % GRID_COLUMNS, math.floor((index - 1) / GRID_COLUMNS)
-	local button = CreateFrame("Button", nil, grid)
+
+	local secure, button = pcall(CreateFrame, "Button", nil, grid, "SecureActionButtonTemplate")
+	if secure and button then
+		button.secure = true
+		button:RegisterForClicks("AnyUp")
+	else
+		button = CreateFrame("Button", nil, grid)
+	end
+	tab.secureButtons = button.secure
 	button:SetSize(ICON_SIZE, ICON_SIZE)
 	button:SetPoint("TOPLEFT", column * (ICON_SIZE + 8), -row * (ICON_SIZE + 8))
 
@@ -228,15 +263,26 @@ local function objectButton(tab, grid, index)
 			GameTooltip:Hide()
 		end
 	end)
-	button:SetScript("OnClick", function()
-		if button.object and button.placeable then
-			local ok, err = FK.Camp:MarkPlaced(FK.Roster.SelfKey(), button.object.id)
-			if not ok then
-				FK.Print("|cffff4040%s|r", err)
+	if button.secure then
+		-- The item use is the attribute's doing, not ours. What was actually
+		-- placed is noticed by Core/Placement.lua watching the finished cast,
+		-- so nothing here has to assume the click worked.
+		button:SetScript("PostClick", function()
+			if FK.UI and FK.UI.Refresh then
+				FK.UI:Refresh()
 			end
-			FK.UI:Refresh()
-		end
-	end)
+		end)
+	else
+		button:SetScript("OnClick", function()
+			if button.object and button.placeable then
+				local ok, err = FK.Camp:MarkPlaced(FK.Roster.SelfKey(), button.object.id)
+				if not ok then
+					FK.Print("|cffff4040%s|r", err)
+				end
+				FK.UI:Refresh()
+			end
+		end)
+	end
 
 	tab.buttons[index] = button
 	return button
@@ -250,6 +296,7 @@ local function buildPlaceTab(parent)
 	local heading = FK.Theme.Label(tab, "GameFontNormalSmall", FK.Theme.colors.text)
 	heading:SetPoint("TOPLEFT", 0, 0)
 	tab.heading = heading
+	tab.secureButtons = false
 
 	local grid = CreateFrame("Frame", nil, tab)
 	grid:SetPoint("TOPLEFT", 0, -20)
@@ -356,6 +403,16 @@ local function buildPlaceTab(parent)
 				end
 				button.reason = reason
 				button.icon:SetDesaturated(not button.placeable)
+
+				-- Point the secure button at the item, or at nothing when it
+				-- would be refused. Attributes cannot be changed in combat, and
+				-- nobody is building a camp mid-pull.
+				if button.secure and not (InCombatLockdown and InCombatLockdown()) then
+					button:SetAttribute("type", button.placeable and "item" or nil)
+					button:SetAttribute("item",
+						button.placeable and object.itemId and ("item:" .. object.itemId) or nil)
+				end
+
 				button:Show()
 			elseif self.buttons[index] then
 				self.buttons[index]:Hide()
@@ -370,9 +427,13 @@ local function buildPlaceTab(parent)
 		elseif readyIn > 0 then
 			footer:SetText(colored("8a8a8a",
 				"Camp cooldown: " .. FK.Cooldowns.Format(readyIn)))
+		elseif self.secureButtons then
+			footer:SetText(colored("8a8a8a",
+				"Click one to place it. Green is the best choice here, red would be wasted."))
 		else
 			footer:SetText(colored("8a8a8a",
-				"Green is the best choice here. Red would be wasted."))
+				"Use the item from your bags; clicking here only records it. "
+					.. "Green is the best choice, red would be wasted."))
 		end
 	end
 

@@ -48,6 +48,10 @@ function Mock.widget(kind, name, counters)
 	function self.SetFocus(s) s.__focused = true end
 	function self.ClearFocus(s) s.__focused = false end
 
+	self.__attributes = {}
+	function self.SetAttribute(s, key, value) s.__attributes[key] = value end
+	function self.GetAttribute(s, key) return s.__attributes[key] end
+
 	function self.SetScript(s, event, handler) s.__scripts[event] = handler end
 	function self.GetScript(s, event) return s.__scripts[event] end
 
@@ -96,7 +100,8 @@ function Mock.install(world)
 	world.secretUnits = world.secretUnits or {}
 	world.names = world.names or {}
 
-	local counters = { frames = 0, textures = 0, fontStrings = 0, templates = 0 }
+	local counters = { frames = 0, textures = 0, fontStrings = 0, templates = 0,
+		templateNames = {} }
 	local secret = setmetatable({}, { __tostring = function() return "<secret>" end })
 
 	_G.issecretvalue = function(value) return value == secret end
@@ -107,11 +112,18 @@ function Mock.install(world)
 		Show = function() end, Hide = function() end,
 	}, { __index = function(_, k) error("GameTooltip has no method " .. tostring(k), 2) end })
 
+	-- An unknown template is an error in the client, which is what lets the
+	-- addon fall back when a template is missing. `world.noTemplates` models a
+	-- client that has none of them.
 	_G.CreateFrame = function(kind, name, _, template)
-		counters.frames = counters.frames + 1
 		if template then
+			if world.noTemplates then
+				error("unknown template " .. tostring(template), 2)
+			end
 			counters.templates = counters.templates + 1
+			counters.templateNames[template] = (counters.templateNames[template] or 0) + 1
 		end
+		counters.frames = counters.frames + 1
 		return Mock.widget(kind, name or ("anon:" .. kind), counters)
 	end
 
@@ -127,6 +139,7 @@ function Mock.install(world)
 	_G.UnitPlayerControlled = function() return false end
 	_G.UnitIsPlayer = function() return false end
 	_G.Ambiguate = function(name) return name end
+	_G.InCombatLockdown = function() return false end
 
 	_G.UnitExists = function(unit)
 		if unit == "player" then return true end
