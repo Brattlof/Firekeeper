@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+## 0.1.1 — 20 September 2026
+
+Bug fixes, all of them found by running this repository's own `addon-reviewer` over the
+0.1.0 code. Nothing in 0.1.0 was reviewed before it shipped; this is that review.
+
+- **A well-developed character's data never reached the group.** Every object id was
+  concatenated into one addon message with no length check: three maxed professions came to
+  269 bytes against a 255 limit, and all twelve to 499. Over the limit the client rejects
+  the message outright, so it failed silently for exactly the players with the most to
+  offer — their groupmates saw them as "no Firekeeper" for ever. Messages are now packed to
+  fit, and an upgraded campfire you need a blueprint for is no longer advertised as
+  something you can place.
+- **A paladin's blessing could hide the wrong camp buff.** All twelve blessings were treated
+  as Blessing of Might, so somebody running Blessing of Salvation made the planner drop the
+  Lodestone and the camp went without its Attack Power. Five other buffs — Strength, Armor,
+  critical strike, mana regeneration and all stats — had no aura mapped at all, which made
+  the planner *worse* whenever it could actually read auras than when it could not.
+- **The last member of a raid was invisible**, and you were counted twice, because raid
+  slots were counted like party slots.
+- **Restricted unit names could throw**, repeatedly: the panel refreshes every five seconds,
+  and every name went into a comparison and a table key without being checked first.
+- **Camp discovery said more than it should.** Every host on the realm answered every
+  `/fk find` on the realm, because the map the seeker asked about was never read. `/fk host`
+  reported success without checking anything was sent. A forced announce ignored the
+  throttle, so a guild reloading together produced a burst of messages.
+- Two guildies standing on the same spot no longer read "right here of here".
+
 ## 0.1.0 — 20 September 2026
 
 First release, built against the Forever beta that opened on 17 September 2026. Early, and
