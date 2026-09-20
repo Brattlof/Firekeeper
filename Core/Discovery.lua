@@ -111,6 +111,39 @@ function Discovery.Position()
 	return { uiMapID = uiMapID, x = x, y = y }
 end
 
+local isSecret = _G.issecretvalue or function() return false end
+
+--- Which layer of a layered realm we are standing on, or nil.
+--
+-- A player's own GUID does not carry the layer, so it has to be read off some
+-- non-player unit nearby. Nothing here is guaranteed: `UnitGUID` is marked
+-- `SecretWhenUnitIdentityRestricted`, and a secret value cannot be split or
+-- compared, so it is tested and dropped rather than parsed
+-- (docs/RESEARCH.md, FK-15). With no creature in sight there is no answer, and
+-- a camp without a layer is shared anyway — a missing layer is worth less than
+-- a wrong one.
+function Discovery.Layer()
+	local units = { "target", "mouseover", "softinteract", "softenemy", "softfriend" }
+	for index = 1, 40 do
+		table.insert(units, "nameplate" .. index)
+	end
+
+	for _, unit in ipairs(units) do
+		if UnitExists and UnitExists(unit)
+			and not (UnitIsPlayer and UnitIsPlayer(unit))
+			and not (UnitPlayerControlled and UnitPlayerControlled(unit)) then
+			local ok, guid = pcall(UnitGUID, unit)
+			if ok and not isSecret(guid) then
+				local layer = FK.CampList.LayerFromGuid(guid)
+				if layer then
+					return layer
+				end
+			end
+		end
+	end
+	return nil
+end
+
 --- What our fire looks like on the wire, or nil if there is nothing to say.
 function Discovery:HostPayload()
 	local position = Discovery.Position()
@@ -129,6 +162,7 @@ function Discovery:HostPayload()
 		uiMapID = position.uiMapID,
 		x = position.x,
 		y = position.y,
+		layer = Discovery.Layer(),
 		free = math.max((camp.slots or 0) - #(camp.placed or {}), 0),
 		slots = camp.slots or 0,
 		professions = professions,
@@ -238,9 +272,19 @@ function Discovery.Waypoint(camp)
 	return ok and wasSet == true
 end
 
---- Camps we have heard about lately, nearest first.
+--- Camps we have heard about lately, nearest first, with our own layer
+-- attached so the panel can say which of them you could actually walk to.
 function Discovery.Found()
-	return FK.CampList.Active(now(), Discovery.Position())
+	local layer = Discovery.Layer()
+	FK.Diag("layer", layer or "not readable")
+
+	local found = FK.CampList.Active(now(), Discovery.Position())
+	for _, camp in ipairs(found) do
+		-- Only claim a different layer when both ends know theirs. Unknown is
+		-- not the same as elsewhere.
+		camp.otherLayer = (layer ~= nil and camp.layer ~= nil and camp.layer ~= layer) or false
+	end
+	return found
 end
 
 -- Guildies -----------------------------------------------------------------

@@ -24,21 +24,65 @@ local function fromWire(value)
 	return (tonumber(value) or 0) / 10000
 end
 
---- HOST:<uiMapID>|<x>|<y>|<free>|<slots>|<professions>
+--- The layer (shard) a unit's GUID was seen on, or nil.
+--
+-- A layered realm can put two players at the same coordinates without them
+-- ever seeing each other, so a camp's position alone can send somebody to an
+-- empty patch of grass. The layer is the fifth field of a non-player GUID —
+-- `Creature-0-<server>-<instance>-<zoneUID>-<id>-<spawn>` — and a player's own
+-- GUID does not carry it, which is why it has to come off a creature or an
+-- object standing nearby.
+--
+-- Pure string work, so it is tested. Finding a unit to ask is Discovery's job,
+-- and so is refusing to pass a secret value in here (docs/RESEARCH.md, FK-15).
+function CampList.LayerFromGuid(guid)
+	if type(guid) ~= "string" or guid == "" then
+		return nil
+	end
+	-- Split by hand rather than with strsplit: this file has to run under plain
+	-- lua5.1 in tests/, where WoW's string globals do not exist.
+	local fields = {}
+	for field in guid:gmatch("[^-]+") do
+		table.insert(fields, field)
+	end
+
+	local unitType = fields[1]
+	if unitType ~= "Creature" and unitType ~= "Vehicle" and unitType ~= "GameObject" then
+		return nil
+	end
+	local layer = tonumber(fields[5])
+	if layer and layer > 0 then
+		return layer
+	end
+	return nil
+end
+
+--- HOST:<uiMapID>|<x>|<y>|<free>|<slots>|<layer>|<professions>
 function CampList.EncodeHost(camp)
-	return ("HOST:%d|%d|%d|%d|%d|%s"):format(
+	return ("HOST:%d|%d|%d|%d|%d|%d|%s"):format(
 		tonumber(camp.uiMapID) or 0,
 		toWire(camp.x),
 		toWire(camp.y),
 		math.max(tonumber(camp.free) or 0, 0),
 		math.max(tonumber(camp.slots) or 0, 0),
+		math.max(tonumber(camp.layer) or 0, 0),
 		table.concat(camp.professions or {}, ","))
 end
 
 --- Turns a HOST payload back into a camp, or nil if it is malformed.
+--
+-- Reads the layer field when it is there and does without it when it is not,
+-- so a client from before the field existed is understood rather than dropped.
 function CampList.DecodeHost(rest)
-	local mapID, x, y, free, slots, professions =
-		tostring(rest or ""):match("^(%d+)|(%d+)|(%d+)|(%d+)|(%d+)|(.*)$")
+	rest = tostring(rest or "")
+
+	local mapID, x, y, free, slots, layer, professions =
+		rest:match("^(%d+)|(%d+)|(%d+)|(%d+)|(%d+)|(%d+)|(.*)$")
+	if not mapID then
+		mapID, x, y, free, slots, professions =
+			rest:match("^(%d+)|(%d+)|(%d+)|(%d+)|(%d+)|(.*)$")
+		layer = nil
+	end
 	if not mapID then
 		return nil
 	end
@@ -48,12 +92,14 @@ function CampList.DecodeHost(rest)
 		table.insert(list, profession)
 	end
 
+	local layerNumber = tonumber(layer)
 	return {
 		uiMapID = tonumber(mapID),
 		x = fromWire(x),
 		y = fromWire(y),
 		free = tonumber(free),
 		slots = tonumber(slots),
+		layer = layerNumber and layerNumber > 0 and layerNumber or nil,
 		professions = list,
 	}
 end

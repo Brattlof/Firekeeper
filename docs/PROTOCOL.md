@@ -25,7 +25,7 @@ erroring.
 | `HELLO` | `HELLO:<version>` | I just logged in. Everyone answers with `OBJ`. |
 | `OBJ` | `OBJ:<version>\|<id,id,id>\|<readyIn>` | What I can place, and my cooldown in seconds. |
 | `CAMP` | `CAMP:<slots>\|<id,id>` | The fire I am at: its capacity and what is on it. |
-| `HOST` | `HOST:<uiMapID>\|<x>\|<y>\|<free>\|<slots>\|<professions>` | I am sitting at a fire here, and this much of it is free. |
+| `HOST` | `HOST:<uiMapID>\|<x>\|<y>\|<free>\|<slots>\|<layer>\|<professions>` | I am sitting at a fire here, and this much of it is free. `layer` is 0 when unknown. |
 | `SEEK` | `SEEK:<uiMapID>` | Is anyone hosting a fire? Only hosts answer. |
 | `PACK` | `PACK:` | I have packed up; forget my fire. |
 | `POS` | `POS:<uiMapID>\|<x>\|<y>` | Where I am, to my guild only, and only while I share. |
@@ -53,3 +53,7 @@ is how a player learns that their addon is out of date.
   while sharing with the guild (`/fk guild share`, to the guild and nobody else).
 - Positions are sent as whole basis points, not floats, which keeps a message short and
   lands within a couple of yards.
+- `HOST` carries the sender's layer so a seeker is not walked to coordinates on a shard
+  they cannot reach. A reader that predates the field still parses the rest, and a camp
+  is only called "on another layer" when both ends know their own — unknown is not the
+  same as elsewhere.
