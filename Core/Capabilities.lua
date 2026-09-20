@@ -47,6 +47,24 @@ local probes = {
 		return C_Map ~= nil and type(C_Map.GetBestMapForUnit) == "function"
 			and type(C_Map.GetPlayerMapPosition) == "function"
 	end,
+	-- Both are present at runtime on 1.60.1 but undeclared in the API
+	-- documentation, which is why camp discovery treats them as optional.
+	customChannel = function()
+		return type(_G.JoinPermanentChannel) == "function"
+			and type(_G.GetChannelName) == "function"
+	end,
+	userWaypoint = function()
+		return C_Map ~= nil and type(C_Map.SetUserWaypoint) == "function"
+	end,
+	-- Outgoing addon chat is allowed realm by realm, so this is a question
+	-- about the realm rather than about the client. See docs/RESEARCH.md, FK-11.
+	addonCommOutgoing = function()
+		if C_ChatInfo == nil or type(C_ChatInfo.AreOutgoingAddonChatMessagesRestricted) ~= "function" then
+			return false
+		end
+		local ok, restricted = pcall(C_ChatInfo.AreOutgoingAddonChatMessagesRestricted)
+		return ok and restricted == false
+	end,
 }
 
 Capabilities.results = {}

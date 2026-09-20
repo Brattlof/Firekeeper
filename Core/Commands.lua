@@ -12,6 +12,8 @@ local function usage()
 		"|cffffff00/fk place <object>|r — record what you put on the fire",
 		"|cffffff00/fk plan|r — print the suggested placements",
 		"|cffffff00/fk announce|r — post the camp to party or say",
+		"|cffffff00/fk find [n]|r — camps other people are hosting; a number sets a waypoint",
+		"|cffffff00/fk host|r — tell people where this fire is, or stop",
 		"|cffffff00/fk buffs [key]|r — class buffs your group is missing; a key toggles an optional one",
 		"|cffffff00/fk cd|r — cooldowns for your characters",
 		"|cffffff00/fk prof <name> <skill>|r — set a profession by hand",
@@ -171,6 +173,59 @@ function handlers.buffs(rest)
 	end
 	if result.unreadable > 0 then
 		FK.Print("|cff888888%d of %d players could not be read.|r", result.unreadable, result.members)
+	end
+end
+
+function handlers.find(rest)
+	local index = tonumber(rest)
+	local found = FK.Discovery.Found()
+
+	if index then
+		local camp = found[index]
+		if not camp then
+			FK.Print("|cffff4040there is no camp %d in the list|r", index)
+			return
+		end
+		if FK.Discovery.Waypoint(camp) then
+			FK.Print("waypoint set on %s's camp.", camp.host)
+		else
+			FK.Print("%s's camp is at |cffffff00%.1f, %.1f|r (no waypoint on this client).",
+				camp.host, camp.x * 100, camp.y * 100)
+		end
+		return
+	end
+
+	FK.Discovery:Seek()
+
+	if #found == 0 then
+		FK.Print("no camps heard of yet. Asking; try again in a moment.")
+		if not FK.Capabilities.Has("addonCommOutgoing") then
+			FK.Print("|cff888888this realm does not let addons send chat, so only camps|r")
+			FK.Print("|cff888888you are told about another way will ever show up.|r")
+		end
+		return
+	end
+
+	FK.Print("camps heard of (|cffffff00/fk find <n>|r for a waypoint):")
+	for position, camp in ipairs(found) do
+		local where = camp.sameMap and ("%.1f, %.1f"):format(camp.x * 100, camp.y * 100) or "another map"
+		FK.Print("  %d. %s — %d of %d slots free, %s%s",
+			position, camp.host, camp.free, camp.slots, where,
+			#camp.professions > 0 and (" (" .. table.concat(camp.professions, ", ") .. ")") or "")
+	end
+end
+
+function handlers.host()
+	if FK.Discovery.hosting then
+		FK.Discovery:StopHosting()
+		FK.Print("packed up: no longer telling people about this fire.")
+		return
+	end
+	local ok, err = FK.Discovery:StartHosting()
+	if ok then
+		FK.Print("hosting: people running Firekeeper can now find this fire.")
+	else
+		FK.Print("|cffff4040%s|r", err)
 	end
 end
 
