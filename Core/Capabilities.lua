@@ -107,6 +107,27 @@ function Capabilities:OnLogin()
 	FK.Diag("build", build)
 	FK.Diag("interface", interface)
 	FK.Diag("probes", answers)
+
+	-- A probe that returns false says "no", but three different things make it
+	-- say that: the call is missing, the call threw, or the answer really is no.
+	-- For the one question where that difference matters, write down the raw
+	-- answer as well. See docs/RESEARCH.md, FK-4.
+	FK.Diag("outgoingRestricted", Capabilities.OutgoingRestrictionDetail())
+end
+
+--- Exactly what the client says about sending addon messages, in words.
+function Capabilities.OutgoingRestrictionDetail()
+	if C_ChatInfo == nil then
+		return "no C_ChatInfo"
+	end
+	if type(C_ChatInfo.AreOutgoingAddonChatMessagesRestricted) ~= "function" then
+		return "no AreOutgoingAddonChatMessagesRestricted"
+	end
+	local ok, restricted = pcall(C_ChatInfo.AreOutgoingAddonChatMessagesRestricted)
+	if not ok then
+		return "call errored: " .. tostring(restricted)
+	end
+	return ("restricted=%s"):format(tostring(restricted))
 end
 
 function Capabilities.Has(name)
