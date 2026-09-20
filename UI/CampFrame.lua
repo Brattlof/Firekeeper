@@ -181,7 +181,19 @@ end
 
 function UI:Toggle()
 	if not self.frame then
-		self.frame = createFrame()
+		if not FK.Theme then
+			FK.Print("|cffff4040the UI theme did not load; the panel cannot be drawn|r")
+			FK.Diag("panel", "no FK.Theme")
+			return
+		end
+		local ok, frameOrErr = pcall(createFrame)
+		if not ok then
+			FK.Print("|cffff4040the panel failed to draw:|r %s", tostring(frameOrErr))
+			FK.Diag("panel", "failed: " .. tostring(frameOrErr))
+			return
+		end
+		self.frame = frameOrErr
+		FK.Diag("panel", "drawn")
 	end
 	if self.frame:IsShown() then
 		self.frame:Hide()

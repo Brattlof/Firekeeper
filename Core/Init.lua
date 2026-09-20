@@ -21,6 +21,10 @@ end
 
 local defaults = {
 	debug = false,
+	-- Evidence about this client, written for us to read off disk. The beta
+	-- writes saved variables but never reads them back (docs/RESEARCH.md, FK-9),
+	-- so a one-way record is exactly what a research question needs.
+	diagnostics = {},
 	-- Legacy perks change camp maths but cannot be read from the API yet, so
 	-- the player tells us their ranks. See docs/RESEARCH.md, question FK-3.
 	legacy = {
@@ -52,6 +56,20 @@ local function applyDefaults(target, source)
 			target[key] = value
 		end
 	end
+end
+
+--- Writes down a fact about this session.
+--
+-- We cannot see the game, and WoW chat cannot be copied, so the only reliable
+-- way to answer a question about this client is to have the addon write the
+-- answer into its saved variables and read the file after a `/reload`. See
+-- `.claude/skills/game-session`.
+function FK.Diag(key, value)
+	if not FK.db then
+		return
+	end
+	FK.db.diagnostics = FK.db.diagnostics or {}
+	FK.db.diagnostics[key] = value
 end
 
 FK.modules = {}

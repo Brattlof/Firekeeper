@@ -8,6 +8,15 @@ Every question below is answered the same way: run the addon on the beta, type
 `/fk caps`, and report what you see. A question closes when someone states the client
 build they tested on and what actually happened.
 
+Chat cannot be copied out of WoW, so the addon also writes its own answers down. At login
+it records the client build and every capability probe into `FirekeeperDB.diagnostics`,
+and the uncertain paths add to it as they run: whether the panel and the minimap button
+drew, what index the camp channel joined on, and whether a waypoint was accepted. The
+client flushes saved variables on `/reload`, logout or quit, so attaching
+`WTF/Account/<account>/SavedVariables/Firekeeper.lua` answers most of the table without
+anyone transcribing a line. It only ever writes that file — the beta never reads it back
+(FK-9) — so it is a record of the session, not a setting.
+
 | ID | Question | What it changes | How to answer it |
 | --- | --- | --- | --- |
 | FK-1 | Does `GetProfessions` / `C_TradeSkillUI` work for an ordinary addon? | Whether professions are detected or typed in with `/fk prof` | `/fk caps` line `professionsApi`, then `/fk plan` with a known profession. On 1.60.1.69913 the probe says yes; the `/fk plan` step is still open |
