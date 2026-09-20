@@ -6,27 +6,38 @@ entries.
 
 ## Confidence
 
-Every object carries one of three levels:
+`confidence` describes the entry itself — its name, profession and tier:
 
 | Level | Meaning | Shown as |
 | --- | --- | --- |
 | `confirmed` | Seen in the game client, reported with a build number | no mark |
 | `reported` | Named in an official panel, patch note, or guide site | `?` in the panel |
-| `unknown` | The object exists, but its effect or skill level is not known | `?` in the panel |
+| `unknown` | The object exists, but we cannot place it yet | `?` in the panel |
+
+What the object *does* is tracked separately, in `effect.kind`, because a name can be
+well sourced while its buff is not. `effect.kind == "unknown"` is the normal state for
+most of the table right now.
 
 A plan built on anything other than `confirmed` data sets `uncertain`, which is how the
 panel knows to mark it and `/fk plan` knows to add a note.
 
 ## What is known so far
 
-Nine objects across six professions were shown publicly, mostly at the BlizzCon deep
-dive: the Blacksmithing Sharpening Wheel at skill 20, the Tailoring Faction Banner, the
-Herbalism Incense Candle, the Alchemy Lab, the Leatherworking Tanning Rack, and the
-Cooking campfire upgrades that raise a camp from three objects to five and then ten.
+All thirty-six objects — twelve professions, three tiers each — are named, from the
+[zockify camping system page](https://www.zockify.com/forever/camping-system/), which
+matches the shorter list in the [Icy Veins camping guide](https://www.icy-veins.com/wow-forever/camping).
+Tier 1 unlocks at skill 20; tiers 2 and 3 come from Blueprint recipes.
 
-Each profession has three objects, and there are twelve professions. That means roughly
-two thirds of the table is still missing. `/fk gaps` prints exactly which professions are
-short, which makes the addon its own to-do list during the beta.
+The effects are the hole. Only four are sourced: the Sharpening Wheel's Attack Power,
+the Faction Banner's Spirit, the Incense Candle's Intellect, and the three Cooking
+campfire kits that set the camp to three, five and ten slots. The other twenty-six
+objects are a name and nothing else.
+
+That is deliberate. A community addon publishes exact buff values and item IDs for all
+thirty-six, but it carries no licence and its numbers are not on Wowhead or any guide
+site, so they are one person's unverified figures. Copying them would put numbers in
+this table that nobody here can stand behind. `/fk gaps` lists those twenty-six instead,
+and a tooltip from anyone playing the beta settles one of them for good.
 
 ## Adding an object
 

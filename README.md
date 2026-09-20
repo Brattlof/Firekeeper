@@ -40,9 +40,10 @@ On cooldown
 Early, and honest about it. Forever's beta opened on 17 September 2026 and the game
 launches on 4 November 2026. Two things are still unsettled:
 
-1. **The data.** Only a handful of camp objects have been shown publicly. Every entry in
-   `Data/CampObjects.lua` carries a confidence level, and anything not yet seen in game is
-   marked with a `?` in the panel. See [docs/DATA.md](docs/DATA.md).
+1. **The data.** All thirty-six camp objects are named, but only four of their effects
+   come from a source worth citing. Every entry in `Data/CampObjects.lua` carries a
+   confidence level, and anything not yet seen in game is marked with a `?` in the
+   panel. See [docs/DATA.md](docs/DATA.md).
 2. **The API.** Blizzard has published no addon notes for Forever. Every uncertain call is
    probed once at login (`Core/Capabilities.lua`); when something is missing the addon
    drops to a simpler mode instead of erroring. See [docs/RESEARCH.md](docs/RESEARCH.md).

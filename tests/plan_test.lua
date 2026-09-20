@@ -33,7 +33,7 @@ end
 
 function tests.one_object_per_player()
 	local plan = Plan.Evaluate({
-		contributors = { contributor("Ana", { "sharpening_wheel", "alchemy_lab" }) },
+		contributors = { contributor("Ana", { "sharpening_wheel", "alchemy_laboratory" }) },
 	})
 	t.count(plan.suggestions, 1, "a player contributes once")
 end
@@ -69,10 +69,10 @@ function tests.a_campfire_upgrade_comes_first_and_buys_slots()
 			contributor("Ana", { "sharpening_wheel" }),
 			contributor("Bo", { "incense_candle" }),
 			contributor("Cy", { "faction_banner" }),
-			contributor("Di", { "upgraded_campfire" }),
+			contributor("Di", { "journeyman_campfire_kit" }),
 		},
 	})
-	t.equals(plan.suggestions[1].objectId, "upgraded_campfire", "the fire is upgraded first")
+	t.equals(plan.suggestions[1].objectId, "journeyman_campfire_kit", "the fire is upgraded first")
 	t.equals(plan.capacity, 5, "capacity rises to five")
 	t.count(plan.suggestions, 4, "everyone still gets to contribute")
 end
@@ -115,7 +115,7 @@ end
 function tests.the_plan_is_deterministic()
 	local state = {
 		contributors = {
-			contributor("Ana", { "sharpening_wheel", "alchemy_lab" }),
+			contributor("Ana", { "sharpening_wheel", "alchemy_laboratory" }),
 			contributor("Bo", { "incense_candle", "tanning_rack" }),
 			contributor("Cy", { "faction_banner" }),
 		},

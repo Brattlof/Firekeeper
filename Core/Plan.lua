@@ -51,7 +51,7 @@ end
 --   covered      = { attack_power = "Battle Shout" }, -- buffs the group already has
 --   contributors = {                             -- everyone standing at the fire
 --     { name = "Bo", ready = true, objects = { "sharpening_wheel", "anvil" } },
---     { name = "Cy", ready = false, readyIn = 900, objects = { "alchemy_lab" } },
+--     { name = "Cy", ready = false, readyIn = 900, objects = { "alchemy_laboratory" } },
 --   },
 -- }
 --

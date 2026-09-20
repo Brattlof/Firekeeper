@@ -115,13 +115,31 @@ end
 
 function handlers.gaps()
 	local gaps = FK.Data.Gaps()
-	if #gaps == 0 then
-		FK.Print("every profession has all three objects recorded.")
+	local unknown = FK.Data.UnknownEffects()
+	if #gaps == 0 and #unknown == 0 then
+		FK.Print("every profession has all three objects, and every effect is recorded.")
 		return
 	end
-	FK.Print("camp objects still missing (please report them, see the README):")
-	for _, gap in ipairs(gaps) do
-		FK.Print("  %s: %d of 3 known", gap.profession, gap.known)
+	if #gaps > 0 then
+		FK.Print("camp objects still missing (please report them, see the README):")
+		for _, gap in ipairs(gaps) do
+			FK.Print("  %s: %d of 3 known", gap.profession, gap.known)
+		end
+	end
+	if #unknown > 0 then
+		-- Grouped by profession: listing 26 objects one per line buries the chat frame.
+		local byProfession, order = {}, {}
+		for _, object in ipairs(unknown) do
+			if not byProfession[object.profession] then
+				byProfession[object.profession] = {}
+				table.insert(order, object.profession)
+			end
+			table.insert(byProfession[object.profession], object.name)
+		end
+		FK.Print("named, but nobody has reported what they do (%d):", #unknown)
+		for _, profession in ipairs(order) do
+			FK.Print("  %s: %s", profession, table.concat(byProfession[profession], ", "))
+		end
 	end
 end
 
