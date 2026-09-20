@@ -11,6 +11,11 @@ FK.Comm = Comm
 
 Comm.PREFIX = "FKPR1"
 Comm.THROTTLE = 5 -- seconds between outgoing announcements
+-- Even a forced announce keeps this much distance. `force` exists so a direct
+-- request is not ignored, not so fifteen guildies reloading after a wipe can
+-- each trigger fifteen back-to-back sends and burn the prefix's burst
+-- allowance. See docs/PROTOCOL.md.
+Comm.FORCED_THROTTLE = 1
 
 local lastSent = 0
 
@@ -138,8 +143,9 @@ end
 --- Tells the group what this character can place and when.
 function Comm:Announce(force)
 	local now = GetTime and GetTime() or 0
-	if not force and (now - lastSent) < Comm.THROTTLE then
-		return
+	local floor = force and Comm.FORCED_THROTTLE or Comm.THROTTLE
+	if (now - lastSent) < floor then
+		return false
 	end
 	lastSent = now
 

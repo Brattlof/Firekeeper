@@ -52,7 +52,11 @@ local probes = {
 	-- Both are present at runtime on 1.60.1 but undeclared in the API
 	-- documentation, which is why camp discovery treats them as optional.
 	customChannel = function()
-		return type(_G.JoinPermanentChannel) == "function"
+		-- Either join call will do: Discovery prefers JoinChannelByName and
+		-- falls back. Requiring the one it does not prefer would switch camp
+		-- discovery off over a call it never makes.
+		return (type(_G.JoinChannelByName) == "function"
+				or type(_G.JoinPermanentChannel) == "function")
 			and type(_G.GetChannelName) == "function"
 	end,
 	-- The button hangs off the client's own Minimap frame. Present on

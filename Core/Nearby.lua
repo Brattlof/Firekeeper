@@ -130,7 +130,13 @@ function Nearby.Line(entry, zoneName)
 		return ("%s — %s"):format(entry.name, zoneName or "somewhere else")
 	end
 	if not entry.yards then
-		return ("%s — %s of here"):format(entry.name, entry.direction or "nearby")
+		if entry.direction == "right here" or not entry.direction then
+			return ("%s — right here"):format(entry.name)
+		end
+		return ("%s — %s of here"):format(entry.name, entry.direction)
+	end
+	if entry.direction == "right here" then
+		return ("%s — right here"):format(entry.name)
 	end
 	return ("%s — %d yards %s"):format(entry.name, math.floor(entry.yards + 0.5), entry.direction)
 end

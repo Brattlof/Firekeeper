@@ -13,7 +13,9 @@ has turned sharing on with `/fk guild share`, which is off by default and surviv
 reload; nothing is sent from inside an instance, where the game gives no position.
 
 The camp channel is joined the first time `/fk find` or `/fk host` is typed, never at
-login. Joining is one of the actions this client refuses to a timer or an event handler, so
+login and never from a timer or an event handler — the guard sits in the join itself,
+because the host ticker and the reply to a `SEEK` both reach it. A join that comes back
+empty is remembered, so nothing retries it in a loop. Joining is one of the actions this client refuses to a timer or an event handler, so
 it has to hang off something the player did (FK-19). `JoinChannelByName` is used rather than
 `JoinPermanentChannel`, which would be written into the player's chat settings and can take
 the /1 slot.
@@ -44,11 +46,15 @@ is how a player learns that their addon is out of date.
 
 ## Rules
 
-- Outgoing announcements are throttled to one every five seconds. A host repeats itself
+- Outgoing announcements are throttled to one every five seconds. A forced announce — the
+  answer to a `HELLO`, or opening the panel — still keeps one second of distance, so a
+  guild reloading together cannot make each client fire a burst of back-to-back sends and
+  spend the prefix's whole allowance. A host repeats itself
   at most every 90 seconds, and `/fk find` may only ask once every 10, which keeps the
   addon well inside the roughly 10-message burst a prefix is allowed.
-- A `SEEK` is answered only by someone actually hosting. An empty field stays silent
-  rather than returning a chorus of "not me".
+- A `SEEK` is answered only by someone actually hosting, **and only when the seeker is
+  asking about the map that host is on**. The map id is in the message for this reason;
+  ignoring it meant every host on the realm answered every `/fk find` on the realm.
 - `CAMP` is only adopted when the sender knows about at least as many placed objects as
   we do, so a latecomer's empty view never wipes a filled camp.
 - Nothing is sent in response to combat, and no message triggers an action: messages
