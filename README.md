@@ -62,6 +62,15 @@ launches on 4 November 2026. Two things are still unsettled:
 If addon-to-addon messages turn out to be unavailable, Firekeeper still works as a
 single-player planner over what you can see and type.
 
+## The panel
+
+`/fk` opens the camp panel, or left-click the flame on your minimap. The panel is drawn
+by the addon rather than borrowed from a Blizzard template, so it looks the same whatever
+the client ships: charcoal, an ember rule under the title, and a row of pips showing the
+fire's slots — lit for used, dark for free — which is the one thing worth reading from
+across the screen. Drag the title bar to move it; it remembers where you put it. The
+minimap button is draggable around the edge and can be hidden with `/fk minimap`.
+
 ## Install
 
 Copy the repository into the `Interface/AddOns` folder of your Forever install, in a
@@ -73,6 +82,7 @@ uses is not confirmed yet; it is the one the client writes its `WTF` directory i
 | Command | What it does |
 | --- | --- |
 | `/fk` | Open the camp panel |
+| `/fk minimap` | Show or hide the minimap button |
 | `/fk new [slots\|campfire]` | Start a fresh camp: a number, or `basic`, `journeyman`, `expert` |
 | `/fk place <object>` | Record what you put on the fire |
 | `/fk plan` | Print the suggested placements |

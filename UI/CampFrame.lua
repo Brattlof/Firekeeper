@@ -1,67 +1,96 @@
 local _, FK = ...
 
--- One panel: the fire, who is standing at it, and what each of them should
--- place. Deliberately plain frames and font strings, because which UI templates
--- Forever ships is not yet known (docs/RESEARCH.md, FK-6) and a missing
--- template must not stop the addon from loading.
+-- The camp panel: the fire, who is standing at it, and what each of them
+-- should place.
+--
+-- Drawn from UI/Theme.lua rather than a Blizzard frame template, so the addon
+-- keeps its own look and a template this client may not ship cannot stop the
+-- panel from appearing (docs/RESEARCH.md, FK-6).
 local UI = FK.RegisterModule("UI", {})
 FK.UI = UI
 
-local WIDTH, HEIGHT, ROW_HEIGHT = 340, 300, 16
+local WIDTH, HEIGHT, ROW_HEIGHT = 360, 340, 15
+local PIP_SIZE, PIP_GAP = 9, 4
+
+local function pip(frame, index)
+	local existing = frame.pips[index]
+	if existing then
+		return existing
+	end
+
+	local holder = CreateFrame("Frame", nil, frame.pipRow)
+	holder:SetSize(PIP_SIZE, PIP_SIZE)
+	holder:SetPoint("LEFT", (index - 1) * (PIP_SIZE + PIP_GAP), 0)
+
+	holder.fill = FK.Theme.Fill(holder, "ARTWORK", FK.Theme.colors.ash)
+	holder.fill:SetAllPoints()
+	FK.Theme.Border(holder, FK.Theme.colors.emberDim, 0.9)
+
+	frame.pips[index] = holder
+	return holder
+end
+
+--- One pip per slot on the fire: lit for a slot in use, dark for a free one.
+-- It is the one thing you want to know from across the screen.
+local function updatePips(frame, used, capacity)
+	for index = 1, math.max(capacity, #frame.pips) do
+		if index <= capacity then
+			local holder = pip(frame, index)
+			local color = index <= used and FK.Theme.colors.ember or FK.Theme.colors.ash
+			if holder.fill.SetColorTexture then
+				holder.fill:SetColorTexture(color[1], color[2], color[3], 1)
+			end
+			holder:Show()
+		elseif frame.pips[index] then
+			frame.pips[index]:Hide()
+		end
+	end
+	frame.pipRow:SetWidth(math.max(capacity, 1) * (PIP_SIZE + PIP_GAP))
+end
 
 local function createFrame()
-	local frame = CreateFrame("Frame", "FirekeeperCampFrame", UIParent, "BasicFrameTemplateWithInset")
-	if not frame then
-		frame = CreateFrame("Frame", "FirekeeperCampFrame", UIParent)
-	end
-	frame:SetSize(WIDTH, HEIGHT)
-	frame:SetPoint("CENTER")
-	frame:SetMovable(true)
-	frame:EnableMouse(true)
-	frame:RegisterForDrag("LeftButton")
-	frame:SetScript("OnDragStart", frame.StartMoving)
-	frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
-	frame:SetClampedToScreen(true)
-	frame:Hide()
+	local Theme = FK.Theme
+	local frame = Theme.Panel("FirekeeperCampFrame", WIDTH, HEIGHT, "Firekeeper", "panelPosition")
 
-	local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-	title:SetPoint("TOP", 0, -6)
-	title:SetText("Firekeeper")
-	frame.title = title
-
-	local header = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-	header:SetPoint("TOPLEFT", 14, -32)
+	-- Header: the slot count, with the pips under it.
+	local header = Theme.Label(frame, "GameFontNormalSmall", Theme.colors.text)
+	header:SetPoint("TOPLEFT", 14, -36)
 	frame.header = header
 
+	local pipRow = CreateFrame("Frame", nil, frame)
+	pipRow:SetPoint("TOPLEFT", 14, -54)
+	pipRow:SetHeight(PIP_SIZE)
+	frame.pipRow = pipRow
+	frame.pips = {}
+
+	local rule = Theme.Line(frame, Theme.colors.emberDim, 0.5)
+	rule:SetPoint("TOPLEFT", 14, -70)
+	rule:SetPoint("TOPRIGHT", -14, -70)
+	rule:SetHeight(1)
+
 	local body = CreateFrame("Frame", nil, frame)
-	body:SetPoint("TOPLEFT", 14, -52)
-	body:SetPoint("BOTTOMRIGHT", -14, 40)
+	body:SetPoint("TOPLEFT", 14, -78)
+	body:SetPoint("BOTTOMRIGHT", -14, 44)
 	frame.body = body
 	frame.rows = {}
 
-	local placeButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-	if placeButton then
-		placeButton:SetSize(150, 22)
-		placeButton:SetPoint("BOTTOMLEFT", 14, 12)
-		placeButton:SetText("I placed this")
-		placeButton:SetScript("OnClick", function()
-			local suggestion = FK.Camp:SuggestionForSelf()
-			if suggestion then
-				FK.Camp:MarkPlaced(FK.Roster.SelfKey(), suggestion.objectId)
-			else
-				FK.Print("nothing suggested for you: use |cffffff00/fk place <object>|r")
-			end
-		end)
-		frame.placeButton = placeButton
-	end
+	local footRule = Theme.Line(frame, Theme.colors.emberDim, 0.5)
+	footRule:SetPoint("BOTTOMLEFT", 14, 38)
+	footRule:SetPoint("BOTTOMRIGHT", -14, 38)
+	footRule:SetHeight(1)
 
-	local announceButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-	if announceButton then
-		announceButton:SetSize(130, 22)
-		announceButton:SetPoint("BOTTOMRIGHT", -14, 12)
-		announceButton:SetText("Announce camp")
-		announceButton:SetScript("OnClick", function() FK.Camp:Announce() end)
-	end
+	frame.placeButton = Theme.Button(frame, "I placed this", 150, function()
+		local suggestion = FK.Camp:SuggestionForSelf()
+		if suggestion then
+			FK.Camp:MarkPlaced(FK.Roster.SelfKey(), suggestion.objectId)
+		else
+			FK.Print("nothing suggested for you: use |cffffff00/fk place <object>|r")
+		end
+	end)
+	frame.placeButton:SetPoint("BOTTOMLEFT", 14, 10)
+
+	local announce = Theme.Button(frame, "Announce camp", 140, function() FK.Camp:Announce() end)
+	announce:SetPoint("BOTTOMRIGHT", -14, 10)
 
 	return frame
 end
@@ -71,10 +100,9 @@ local function row(frame, index)
 	if existing then
 		return existing
 	end
-	local line = frame.body:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+	local line = FK.Theme.Label(frame.body, "GameFontHighlightSmall", FK.Theme.colors.text)
 	line:SetPoint("TOPLEFT", 0, -(index - 1) * ROW_HEIGHT)
 	line:SetPoint("RIGHT", frame.body, "RIGHT", 0, 0)
-	line:SetJustifyH("LEFT")
 	frame.rows[index] = line
 	return line
 end
@@ -86,49 +114,58 @@ function UI:Refresh()
 	end
 
 	local plan = FK.Camp:Plan()
-	frame.header:SetText(("Camp: |cffffff00%d/%d|r slots used"):format(plan.used, plan.capacity))
+	frame.header:SetText(("%d of %d slots used"):format(plan.used, plan.capacity))
+	updatePips(frame, plan.used, plan.capacity)
 
 	local lines = {}
 
 	for _, entry in ipairs(FK.Camp.placed) do
 		local object = FK.Data.GetObject(entry.objectId)
-		table.insert(lines, ("|cff40ff40on the fire|r  %s — %s"):format(object and object.name or entry.objectId, entry.player))
+		table.insert(lines, ("|cff73d957on the fire|r  %s — %s"):format(
+			object and object.name or entry.objectId, entry.player))
 	end
 
 	if #plan.suggestions > 0 then
 		table.insert(lines, " ")
-		table.insert(lines, "|cffffd100Suggested|r")
+		table.insert(lines, "|cfffad161Suggested|r")
 		for _, suggestion in ipairs(plan.suggestions) do
-			local mark = suggestion.confidence == "confirmed" and "" or " |cff888888?|r"
-			table.insert(lines, ("  %s → %s%s"):format(suggestion.player, suggestion.name, mark))
+			local mark = suggestion.confidence == "confirmed" and "" or " |cff8a8a8a?|r"
+			table.insert(lines, ("  %s → |cffff8c38%s|r%s"):format(suggestion.player, suggestion.name, mark))
 		end
 	end
 
 	if #plan.redundant > 0 then
 		table.insert(lines, " ")
-		table.insert(lines, "|cffffd100Would be wasted|r")
+		table.insert(lines, "|cfffad161Would be wasted|r")
 		for _, entry in ipairs(plan.redundant) do
-			table.insert(lines, ("  |cff888888%s: %s — %s|r"):format(entry.player, entry.name, FK.Plan.ReasonText(entry.reason)))
+			table.insert(lines, ("  |cff8a8a8a%s: %s — %s|r"):format(
+				entry.player, entry.name, FK.Plan.ReasonText(entry.reason)))
 		end
 	end
 
 	if #plan.waiting > 0 then
 		table.insert(lines, " ")
-		table.insert(lines, "|cffffd100On cooldown|r")
+		table.insert(lines, "|cfffad161On cooldown|r")
 		for _, entry in ipairs(plan.waiting) do
-			table.insert(lines, ("  |cff888888%s — %s|r"):format(entry.player, FK.Cooldowns.Format(entry.readyIn)))
+			table.insert(lines, ("  |cff8a8a8a%s — %s|r"):format(
+				entry.player, FK.Cooldowns.Format(entry.readyIn)))
 		end
 	end
 
 	local silent = FK.Roster:Silent()
 	if #silent > 0 then
 		table.insert(lines, " ")
-		table.insert(lines, ("|cff888888No Firekeeper: %s|r"):format(table.concat(silent, ", ")))
+		table.insert(lines, ("|cff8a8a8aNo Firekeeper: %s|r"):format(table.concat(silent, ", ")))
 	end
 
 	if #lines == 0 then
-		lines = { "|cff888888Nobody at this fire has told us what they can place.|r" }
+		lines = { "|cff8a8a8aNobody at this fire has told us what they can place.|r" }
 	end
+
+	-- The place button says whether there is anything for you to do.
+	local suggestion = FK.Camp:SuggestionForSelf()
+	FK.Theme.SetTextColor(frame.placeButton.text,
+		suggestion and FK.Theme.colors.text or FK.Theme.colors.smoke)
 
 	local maxRows = math.floor(frame.body:GetHeight() / ROW_HEIGHT)
 	for index = 1, math.max(maxRows, #lines) do
