@@ -8,6 +8,10 @@ first. Whether ordinary addons may send them on Forever is unverified
 (docs/RESEARCH.md, FK-4); when `C_ChatInfo` is missing or a send throws, the addon
 disables comms for the session and keeps planning locally.
 
+`POS` and `GONE` go to `GUILD` and nowhere else. They are sent only while the player
+has turned sharing on with `/fk guild share`, which is off by default and survives a
+reload; nothing is sent from inside an instance, where the game gives no position.
+
 `HOST`, `SEEK` and `PACK` are about finding strangers, so they go to the custom channel
 `FirekeeperCamps`, which the addon joins ten seconds after login. Nothing is sent there
 unless the player types `/fk host` or `/fk find`. Outgoing addon chat is permitted realm
@@ -24,6 +28,8 @@ erroring.
 | `HOST` | `HOST:<uiMapID>\|<x>\|<y>\|<free>\|<slots>\|<professions>` | I am sitting at a fire here, and this much of it is free. |
 | `SEEK` | `SEEK:<uiMapID>` | Is anyone hosting a fire? Only hosts answer. |
 | `PACK` | `PACK:` | I have packed up; forget my fire. |
+| `POS` | `POS:<uiMapID>\|<x>\|<y>` | Where I am, to my guild only, and only while I share. |
+| `GONE` | `GONE:` | I stopped sharing; forget where I was. |
 
 Object ids are the `id` field from `Data/CampObjects.lua`, so two clients with different
 data versions still understand each other's known objects. An id the receiver does not
@@ -41,6 +47,9 @@ is how a player learns that their addon is out of date.
   we do, so a latecomer's empty view never wipes a filled camp.
 - Nothing is sent in response to combat, and no message triggers an action: messages
   change what the panel shows, never what the player does.
-- The protocol carries no data about a player beyond their camp objects, cooldown, and —
-  only while they choose to host — the map coordinates of the fire they are sitting at.
-  Hosting is off until the player turns it on and stops when they type `/fk host` again.
+- The protocol carries no data about a player beyond their camp objects, cooldown, and
+  map coordinates. Coordinates are sent in exactly two cases, both opt-in and both
+  revocable in one command: while hosting a fire (`/fk host`, to the open channel), and
+  while sharing with the guild (`/fk guild share`, to the guild and nobody else).
+- Positions are sent as whole basis points, not floats, which keeps a message short and
+  lands within a couple of yards.

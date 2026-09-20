@@ -30,6 +30,7 @@ Core/Auras.lua
 Core/Comm.lua
 Core/Camp.lua
 Core/CampList.lua
+Core/Nearby.lua
 Core/Discovery.lua
 Core/Commands.lua
 
