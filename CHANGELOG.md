@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+## 0.2.1 — 20 September 2026
+
+Fixes for the panel that shipped in 0.2.0, found by reviewing it afterwards.
+
+- **The Place tab was telling you to skip the object it was recommending.** It reddened
+  anything whose buff was already covered, including the tier-2 and tier-3 objects that
+  merely *carry* a lower tier's buff — so the Camp tab would suggest a Master Forge while
+  the Place tab painted that same forge red and called it wasted. A Master Forge is a
+  blacksmithing workspace; nothing covers that. Roughly twenty of the thirty-nine objects
+  were affected whenever any class buff covered a carried buff.
+- **Clicking the first camp on the Find tab did nothing.** If the list had ever been empty
+  — which it is when you open the panel — the first row kept a do-nothing handler for the
+  rest of the session. Setting a waypoint is that tab's only action.
+- A full fire now refuses another object instead of showing "4 of 3 slots used", and that
+  is fixed in the camp itself, so `/fk place` gets it too.
+- The Legacy rank boxes no longer wipe what you are typing when the panel refreshes.
+- The You tab was silently cutting off the client report, hiding the saved-settings warning
+  with it. It now lists what this client refuses, with a count.
+- A tab that hits an error says so once, rather than quietly showing stale content.
+- Much less work per refresh: the camp is planned once instead of three times, and auras
+  are read once instead of three or four times. In a forty-man raid that was several
+  thousand API calls every five seconds.
+
 ## 0.2.0 — 20 September 2026
 
 - The panel is now five tabs and covers everything the addon does, so nothing needs a slash
