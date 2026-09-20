@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- The panel is now five tabs and covers everything the addon does, so nothing needs a slash
+  command any more. **Place** shows every object you can place as icons, coloured green for
+  the best choice here and red for one that would be wasted, and you put an object on the
+  fire by clicking it. **Buffs** answers the min-maxing question directly: every camp buff,
+  and whether it is missing, available from somebody standing here, already burning, or
+  already covered by a class buff. **Find**, **Camp** and **You** carry the rest, including
+  Legacy ranks and profession skills you can type into a box instead of a command.
+- Icon buttons on the title bar for announcing, looking for camps and starting a fresh one.
+
 ## 0.1.1 — 20 September 2026
 
 Bug fixes, all of them found by running this repository's own `addon-reviewer` over the
