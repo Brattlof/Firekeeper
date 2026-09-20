@@ -92,7 +92,7 @@ function Camp:SuggestionForSelf()
 	return nil, plan
 end
 
-local function buffSummary(plan)
+local function buffSummary()
 	local labels = {}
 	for _, entry in ipairs(FK.Camp.placed) do
 		local object = FK.Data.GetObject(entry.objectId)
@@ -114,7 +114,7 @@ function Camp:AnnouncementText()
 	local plan = self:Plan()
 	local free = math.max(plan.capacity - plan.used, 0)
 	return ("Camp up: %s. %d/%d slots used%s"):format(
-		buffSummary(plan),
+		buffSummary(),
 		plan.used,
 		plan.capacity,
 		free > 0 and (", %d free"):format(free) or ""

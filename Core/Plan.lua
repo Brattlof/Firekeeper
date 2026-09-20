@@ -85,42 +85,44 @@ function Plan.Evaluate(state)
 	local candidates, redundant, waiting, unknownObjects = {}, {}, {}, {}
 
 	for _, contributor in ipairs(state.contributors or {}) do
-		if spentPlayers[contributor.name] then
-			-- Already gave their one object to this fire.
-		elseif contributor.ready == false then
-			table.insert(waiting, { player = contributor.name, readyIn = contributor.readyIn })
-		else
-			for _, objectId in ipairs(contributor.objects or {}) do
-				local object = objectFor(objectId)
-				if not object then
-					table.insert(unknownObjects, { player = contributor.name, objectId = objectId })
-				else
-					local key = Plan.EffectKey(object)
-					local effect = object.effect or { kind = "unknown" }
-					if effect.kind == "buff" and covered[effect.buff] then
-						table.insert(redundant, {
-							player = contributor.name,
-							objectId = objectId,
-							name = object.name,
-							reason = { code = "covered", buff = effect.buff, by = covered[effect.buff] },
-						})
-					elseif placedEffects[key] then
-						table.insert(redundant, {
-							player = contributor.name,
-							objectId = objectId,
-							name = object.name,
-							reason = { code = "duplicate", by = placedEffects[key] },
-						})
+		-- Somebody who already gave their one object to this fire is neither a
+		-- candidate nor waiting for a cooldown: they are simply done.
+		if not spentPlayers[contributor.name] then
+			if contributor.ready == false then
+				table.insert(waiting, { player = contributor.name, readyIn = contributor.readyIn })
+			else
+				for _, objectId in ipairs(contributor.objects or {}) do
+					local object = objectFor(objectId)
+					if not object then
+						table.insert(unknownObjects, { player = contributor.name, objectId = objectId })
 					else
-						table.insert(candidates, {
-							player = contributor.name,
-							objectId = objectId,
-							name = object.name,
-							effectKey = key,
-							score = EFFECT_WEIGHT[effect.kind] or EFFECT_WEIGHT.unknown,
-							tier = object.tier or 1,
-							confidence = object.confidence or "unknown",
-						})
+						local key = Plan.EffectKey(object)
+						local effect = object.effect or { kind = "unknown" }
+						if effect.kind == "buff" and covered[effect.buff] then
+							table.insert(redundant, {
+								player = contributor.name,
+								objectId = objectId,
+								name = object.name,
+								reason = { code = "covered", buff = effect.buff, by = covered[effect.buff] },
+							})
+						elseif placedEffects[key] then
+							table.insert(redundant, {
+								player = contributor.name,
+								objectId = objectId,
+								name = object.name,
+								reason = { code = "duplicate", by = placedEffects[key] },
+							})
+						else
+							table.insert(candidates, {
+								player = contributor.name,
+								objectId = objectId,
+								name = object.name,
+								effectKey = key,
+								score = EFFECT_WEIGHT[effect.kind] or EFFECT_WEIGHT.unknown,
+								tier = object.tier or 1,
+								confidence = object.confidence or "unknown",
+							})
+						end
 					end
 				end
 			end
