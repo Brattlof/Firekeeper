@@ -10,6 +10,9 @@
   already covered by a class buff. **Find**, **Camp** and **You** carry the rest, including
   Legacy ranks and profession skills you can type into a box instead of a command.
 - Icon buttons on the title bar for announcing, looking for camps and starting a fresh one.
+- Click a camp on the **Find** tab to put a waypoint on it, and set a profession by hand on
+  **You** by cycling to its name and typing a skill level. Those were the last two things
+  that still needed a slash command, and one of them was being advertised inside the panel.
 
 ## 0.1.1 — 20 September 2026
 
