@@ -24,8 +24,10 @@ FK.Data = FK.Data or {}
 --   minLevel   level a groupmate needs before it is fair to ask them for it
 --   talent     only ask once somebody in the group is seen carrying it, since
 --              that is the only proof anyone has the talent
---   buffGroup  the camp buff group in Data/BuffGroups.lua this makes redundant,
---              which is how an observed aura beats a guess from class alone
+--
+-- This table is only about what is worth asking a groupmate for. Which aura
+-- makes a *camp* object redundant is Data/BuffGroups.lua's job and is keyed per
+-- aura there — a paladin's twelve blessings do not all mean Attack Power.
 FK.Data.manaClasses = {
 	PRIEST = true, MAGE = true, WARLOCK = true, DRUID = true,
 	PALADIN = true, SHAMAN = true, HUNTER = true,
@@ -42,12 +44,11 @@ FK.Data.classBuffs = {
 	-- Group buffs
 	{
 		key = "fortitude", label = "Fortitude", class = "PRIEST", scope = "group", minLevel = 1,
-		buffGroup = "stamina",
 		auras = { "Power Word: Fortitude", "Prayer of Fortitude" },
 	},
 	{
 		key = "spirit", label = "Divine Spirit", class = "PRIEST", scope = "group",
-		who = "mana", minLevel = 30, talent = true, buffGroup = "spirit",
+		who = "mana", minLevel = 30, talent = true,
 		auras = { "Divine Spirit", "Prayer of Spirit" },
 	},
 	{
@@ -57,7 +58,7 @@ FK.Data.classBuffs = {
 	},
 	{
 		key = "intellect", label = "Arcane Intellect", class = "MAGE", scope = "group",
-		who = "mana", minLevel = 1, buffGroup = "intellect",
+		who = "mana", minLevel = 1,
 		auras = { "Arcane Intellect", "Arcane Brilliance" },
 	},
 	{
@@ -66,12 +67,12 @@ FK.Data.classBuffs = {
 	},
 	{
 		key = "blessing", label = "a Blessing", class = "PALADIN", scope = "blessing",
-		minLevel = 4, buffGroup = "attack_power",
+		minLevel = 4,
 		auras = BLESSINGS,
 	},
 	{
 		key = "battleshout", label = "Battle Shout", class = "WARRIOR", scope = "group",
-		minLevel = 1, buffGroup = "attack_power",
+		minLevel = 1,
 		auras = { "Battle Shout" },
 	},
 
