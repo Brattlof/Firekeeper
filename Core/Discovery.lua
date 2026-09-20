@@ -9,10 +9,9 @@ local _, FK = ...
 --
 --   * `JoinPermanentChannel` is present at runtime but undeclared in the API
 --     documentation, so it is called inside a pcall.
---   * `C_ChatInfo.AreOutgoingAddonChatMessagesRestricted` exists and its own
---     documentation says outgoing addon chat is allowed "on a realm-by-realm
---     basis". On a realm that says no, hosting quietly does nothing and the
---     list only ever holds camps you were told about some other way.
+--   * Sending may simply not work. We do not ask permission first: the result
+--     code of a real send is the only trustworthy answer, and a send that does
+--     not go out costs nothing but a debug line.
 --   * The player's position is not readable indoors or in an instance, and a
 --     camp with no coordinates is not worth announcing.
 --
@@ -38,17 +37,13 @@ local function now()
 	return GetTime and GetTime() or 0
 end
 
+-- Deliberately *not* consulted here: `AreOutgoingAddonChatMessagesRestricted`.
+-- It answers true on this client far more often than anything is actually
+-- blocked — CooldownCollaborator hit the same thing and stopped trusting it —
+-- and gating on it silently killed every send. The result code of a real
+-- attempt is the authority. See docs/RESEARCH.md, FK-4.
 local function outgoingAllowed()
-	if not FK.Capabilities.Has("addonComm") then
-		return false
-	end
-	if C_ChatInfo and type(C_ChatInfo.AreOutgoingAddonChatMessagesRestricted) == "function" then
-		local ok, restricted = pcall(C_ChatInfo.AreOutgoingAddonChatMessagesRestricted)
-		if ok and restricted then
-			return false
-		end
-	end
-	return true
+	return FK.Capabilities.Has("addonComm")
 end
 
 --- The channel's index, joining it the first time we need it.
@@ -79,11 +74,17 @@ local function send(message)
 	if not index then
 		return false
 	end
-	local ok = pcall(C_ChatInfo.SendAddonMessage, FK.Comm.PREFIX, message, "CHANNEL", index)
+	local ok, result = pcall(C_ChatInfo.SendAddonMessage, FK.Comm.PREFIX, message, "CHANNEL", index)
 	if not ok then
-		FK.Debug("channel send failed; camp discovery is off for this session")
+		FK.Debug("channel send threw; camp discovery is off for this session")
+		return false
 	end
-	return ok
+	if not FK.Comm.WasSent(result) then
+		FK.Debug("channel message not sent, result %s",
+			FK.Comm.enumName(Enum and Enum.SendAddonMessageResult, result))
+		return false
+	end
+	return true
 end
 
 --- Where the player is, or nil when the client will not say (indoors, in an
@@ -258,7 +259,16 @@ local function sendGuild(message)
 	if not (IsInGuild and IsInGuild()) then
 		return false
 	end
-	return (pcall(C_ChatInfo.SendAddonMessage, FK.Comm.PREFIX, message, "GUILD"))
+	local ok, result = pcall(C_ChatInfo.SendAddonMessage, FK.Comm.PREFIX, message, "GUILD")
+	if not ok then
+		return false
+	end
+	if not FK.Comm.WasSent(result) then
+		FK.Debug("guild message not sent, result %s",
+			FK.Comm.enumName(Enum and Enum.SendAddonMessageResult, result))
+		return false
+	end
+	return true
 end
 
 --- The width and height of the player's map in yards, which is the only way
