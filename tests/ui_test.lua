@@ -138,6 +138,107 @@ function tests.the_place_grid_offers_what_you_can_place()
 	t.count(FK.debugLines, 0, "clicking one raised nothing")
 end
 
+function tests.the_place_tab_never_contradicts_the_planner()
+	-- The Place tab used to red a button whenever the buff it *carries* was
+	-- covered, while the planner only calls an object wasted when its own
+	-- effect is that buff. So the Camp tab said "Suggested → Master Forge" and
+	-- the Place tab painted that same forge red. Advice that argues with itself
+	-- is worse than none.
+	local FK, panel = build()
+	FK.Roster.Coverage = function() return { strength = "Strength of Earth Totem" } end
+	FK.Professions.PlaceableObjects = function()
+		local out = {}
+		for _, id in ipairs({ "sharpening_wheel", "anvil", "master_forge" }) do
+			table.insert(out, FK.Data.GetObject(id))
+		end
+		return out
+	end
+	FK.Camp.placed = {}
+	FK.Camp.Plan = function(self)
+		return FK.Plan.Evaluate({
+			slots = 3, placed = self.placed,
+			covered = FK.Roster.Coverage(),
+			contributors = { { name = "Ana", ready = true, readyIn = 0,
+				objects = { "sharpening_wheel", "anvil", "master_forge" } } },
+		})
+	end
+	FK.Camp.SuggestionForSelf = function(self)
+		local plan = self:Plan()
+		for _, suggestion in ipairs(plan.suggestions) do
+			if suggestion.player == "Ana" then return suggestion, plan end
+		end
+		return nil, plan
+	end
+
+	panel.strip:Select("Place")
+	FK.UI:Refresh()
+
+	local suggested = FK.Camp:SuggestionForSelf()
+	t.isTrue(suggested, "the planner suggested something")
+
+	for _, button in ipairs(panel.tabFrames.Place.buttons) do
+		if button.object and button.object.id == suggested.objectId then
+			t.isTrue(not button.reason or not button.reason:find("Wasted"),
+				"the suggested " .. button.object.name .. " is not painted wasted: "
+					.. tostring(button.reason))
+		end
+		-- The wheel's own effect *is* the covered buff, so it is genuinely wasted.
+		if button.object and button.object.id == "sharpening_wheel" then
+			t.isTrue(button.reason and button.reason:find("Wasted"),
+				"the wheel itself is still flagged")
+		end
+	end
+end
+
+function tests.a_camp_row_still_works_after_an_empty_list()
+	-- Row 1 is created by the "none heard of yet" branch with a do-nothing
+	-- handler. Pooled rows kept it, so the tab's only action was dead for the
+	-- rest of the session once camps actually arrived.
+	local FK, panel = build()
+	local camps = {}
+	FK.Discovery.Found = function() return camps end
+
+	panel.strip:Select("Find")
+	FK.UI:Refresh()
+
+	camps = { { host = "Cy", free = 2, slots = 3, x = 0.4, y = 0.6, sameMap = true } }
+	FK.UI:Refresh()
+
+	local asked
+	FK.Discovery.Waypoint = function(camp) asked = camp and camp.host return true end
+	panel.tabFrames.Find.campRows[1].__scripts.OnClick()
+	t.equals(asked, "Cy", "clicking the first row asked for its waypoint")
+end
+
+function tests.a_full_fire_refuses_another_object()
+	local FK = build()
+	FK.Camp = nil
+	Mock.load(FK, root, "Core/Camp.lua")
+	FK.Cooldowns = FK.Cooldowns
+	FK.Camp.slots = 1
+	FK.Camp.placed = { { player = "Bo", objectId = "incense_candle" } }
+
+	local ok, err = FK.Camp:MarkPlaced("Ana", "lodestone", true)
+	t.equals(ok, false, "a full fire refuses")
+	t.isTrue(err and err:find("full"), "and says why: " .. tostring(err))
+
+	-- A campfire replaces the fire rather than taking a slot, so it is exempt.
+	local fireOk = FK.Camp:MarkPlaced("Cy", "expert_campfire_kit", true)
+	t.equals(fireOk, true, "but a bigger campfire is still allowed")
+end
+
+function tests.a_nameless_player_cannot_place()
+	local FK = build()
+	FK.Camp = nil
+	Mock.load(FK, root, "Core/Camp.lua")
+	FK.Camp.slots = 3
+	FK.Camp.placed = {}
+
+	local ok, err = FK.Camp:MarkPlaced(nil, "lodestone", true)
+	t.equals(ok, false, "a nil player is refused")
+	t.isTrue(err and err:find("who you are"), "rather than becoming a nil table index")
+end
+
 function tests.a_camp_can_be_waypointed_by_clicking_it()
 	local FK, panel = build()
 	local asked = false

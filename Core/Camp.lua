@@ -28,10 +28,23 @@ function Camp:MarkPlaced(player, objectId, silent)
 		return false, ("unknown camp object: %s"):format(tostring(objectId))
 	end
 
+	-- `Roster.SelfKey` returns nil when the client will not say who you are,
+	-- and a nil player would end up as a table index in the cooldown record.
+	if not player then
+		return false, "this client will not say who you are right now"
+	end
+
 	for _, entry in ipairs(self.placed) do
 		if entry.player == player then
 			return false, ("%s has already contributed to this camp"):format(player)
 		end
+	end
+
+	-- A fire holds what it holds. A campfire is exempt: it replaces the fire
+	-- rather than sitting in one of its slots (docs/RESEARCH.md, FK-2).
+	local raisesCapacity = object.effect and object.effect.kind == "slots"
+	if not raisesCapacity and #self.placed >= (self.slots or 0) then
+		return false, ("this fire is full: %d of %d slots used"):format(#self.placed, self.slots or 0)
 	end
 
 	table.insert(self.placed, { player = player, objectId = objectId })
