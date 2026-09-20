@@ -39,6 +39,14 @@ function tests.unknown_effects_are_listed_for_reporting()
 	end
 end
 
+function tests.the_sourced_effects_are_the_ones_we_can_cite()
+	-- Twelve objects have an effect from a source we can point at; the rest are
+	-- a name and nothing more. If this number moves, docs/DATA.md moves with it.
+	local unknown = #Data.UnknownEffects()
+	t.equals(#Data.campObjects - unknown, 12, "twelve objects have a sourced effect")
+	t.equals(unknown, 24, "and twenty-four are still just a name")
+end
+
 function tests.campfires_are_sorted_and_capped()
 	t.count(Data.campfires, 3, "three Cooking campfires")
 	t.equals(Data.campfires[1].effect.slots, 3, "smallest first")

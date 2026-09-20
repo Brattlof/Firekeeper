@@ -24,6 +24,13 @@ FK.Data.buffGroups = {
 		},
 		confidence = "reported",
 	},
+	stamina = {
+		label = "Stamina",
+		classBuffs = {
+			{ spell = "Power Word: Fortitude", class = "PRIEST" },
+		},
+		confidence = "reported",
+	},
 	spirit = {
 		label = "Spirit",
 		classBuffs = {

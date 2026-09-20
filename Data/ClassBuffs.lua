@@ -42,6 +42,7 @@ FK.Data.classBuffs = {
 	-- Group buffs
 	{
 		key = "fortitude", label = "Fortitude", class = "PRIEST", scope = "group", minLevel = 1,
+		buffGroup = "stamina",
 		auras = { "Power Word: Fortitude", "Prayer of Fortitude" },
 	},
 	{

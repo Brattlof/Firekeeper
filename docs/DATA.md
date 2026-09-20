@@ -28,10 +28,26 @@ All thirty-six objects — twelve professions, three tiers each — are named, f
 matches the shorter list in the [Icy Veins camping guide](https://www.icy-veins.com/wow-forever/camping).
 Tier 1 unlocks at skill 20; tiers 2 and 3 come from Blueprint recipes.
 
-The effects are the hole. Only four are sourced: the Sharpening Wheel's Attack Power,
-the Faction Banner's Spirit, the Incense Candle's Intellect, and the three Cooking
-campfire kits that set the camp to three, five and ten slots. The other twenty-six
-objects are a name and nothing else.
+The effects are the hole. Twelve of the thirty-six have one we can point at a source for:
+
+| Object | Effect | Does not stack with |
+| --- | --- | --- |
+| Sharpening Wheel | Attack Power | Blessing of Might, Battle Shout |
+| Lodestone | Melee Attack Power | Blessing of Might |
+| Incense Candle | Intellect | Arcane Intellect |
+| Faction Banner | Spirit | Divine Spirit |
+| First Aid Kit | Stamina | Power Word: Fortitude |
+| Basic / Journeyman / Expert Campfire Kit | 3 / 5 / 10 object slots | — |
+| Anvil, Master Forge, Alchemy Laboratory, Tanning Rack | profession workspace | — |
+
+The other twenty-four objects are a name and nothing else. `tests/data_test.lua` pins
+those counts, so this table cannot quietly drift out of date.
+
+The Sharpening Wheel is the one live disagreement: three guides and Blizzard's deep dive
+recap call it Attack Power, while the beta database reportedly gives level-scaled Strength
+exclusive with Strength of Earth Totem. It is recorded as Attack Power with the conflict
+in its `note`, because that is where three of the four sources point. A tooltip settles
+it.
 
 That is deliberate. A community addon publishes exact buff values and item IDs for all
 thirty-six, but it carries no licence and its numbers are not on Wowhead or any guide
