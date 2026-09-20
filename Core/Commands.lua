@@ -202,10 +202,7 @@ function handlers.find(rest)
 
 	if #found == 0 then
 		FK.Print("no camps heard of yet. Asking; try again in a moment.")
-		if not FK.Capabilities.Has("addonCommOutgoing") then
-			FK.Print("|cff888888this realm does not let addons send chat, so only camps|r")
-			FK.Print("|cff888888you are told about another way will ever show up.|r")
-		end
+		FK.Print("|cff888888only people running Firekeeper and hosting a fire show up here.|r")
 		return
 	end
 

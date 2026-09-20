@@ -41,6 +41,21 @@ end
 
 Comm.enumName = enumName
 
+--- Did a send actually go out?
+--
+-- `Enum.SendAddonMessageResult.Success` is 0, and the declaration marks the
+-- return as never nil. On this client it is nil anyway: CooldownCollaborator
+-- reports "nil/0 == success" from the field, and comparing nil against 0 would
+-- log every successful send as a failure. Treat both as sent and anything else
+-- as the reason it was not. See docs/RESEARCH.md, FK-4.
+function Comm.WasSent(result)
+	if result == nil then
+		return true
+	end
+	local success = Enum and Enum.SendAddonMessageResult and Enum.SendAddonMessageResult.Success
+	return result == (success or 0)
+end
+
 -- The first send of the session is the one worth writing down: it is the real
 -- answer to FK-4, where a capability probe can only guess.
 local recordedFirstSend = false
@@ -75,7 +90,7 @@ local function send(message)
 		FK.Capabilities.results.addonComm = false
 		return false
 	end
-	if result ~= Enum.SendAddonMessageResult.Success then
+	if not Comm.WasSent(result) then
 		FK.Debug("addon message not sent, result %s", enumName(Enum.SendAddonMessageResult, result))
 		return false
 	end
