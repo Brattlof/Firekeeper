@@ -18,6 +18,7 @@ build they tested on and what actually happened.
 | FK-6 | Which UI templates exist (`BasicFrameTemplateWithInset`, `UIPanelButtonTemplate`)? | Panel styling, `UI/CampFrame.lua` falls back to a bare frame | `/fk` and report whether the panel has a border and buttons |
 | FK-7 | Do camp buffs and class buffs really overwrite rather than stack? | The whole point of the planner | Take Blessing of Might, then rest at a fire with a Sharpening Wheel, and watch the aura |
 | FK-8 | Is the object cooldown one hour per player, per camp, or per object? | `Core/Cooldowns.lua` assumes one hour per player | Place an object, then try a second one at another fire |
+| FK-10 | May an ordinary addon read auras on party members, and when do they come back secret? | Whether `/fk buffs` works and whether the planner trusts observed auras or guesses from class, `Core/Auras.lua` | `/fk caps` lines `unitAuras` and `auraRead`, then `/fk buffs` in a party, in and out of combat |
 
 Two related pieces of community work are worth reading before adding to this list:
 [ForeverTome's API handbook](https://github.com/Skold177/ForeverTome/tree/main/docs), which

@@ -35,7 +35,9 @@ read_globals = {
 	"UIParent",
 	"UnitClass",
 	"UnitExists",
+	"UnitLevel",
 	"UnitName",
+	"issecretvalue",
 	"time",
 }
 

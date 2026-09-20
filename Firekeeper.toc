@@ -17,13 +17,16 @@ Locales/enUS.lua
 
 Data/BuffGroups.lua
 Data/CampObjects.lua
+Data/ClassBuffs.lua
 
 Core/Init.lua
 Core/Plan.lua
+Core/Buffs.lua
 Core/Cooldowns.lua
 Core/Capabilities.lua
 Core/Professions.lua
 Core/Roster.lua
+Core/Auras.lua
 Core/Comm.lua
 Core/Camp.lua
 Core/Commands.lua
