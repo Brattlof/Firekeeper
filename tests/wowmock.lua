@@ -60,9 +60,22 @@ function Mock.widget(kind, name, counters)
 		end
 	end
 
+	-- Unknown keys: raise for anything that looks like a widget method, return
+	-- nil for anything that looks like a field.
+	--
+	-- Addons hang their own data on frames — `button.reason`, `row.camp` — and
+	-- reading one that was never set is ordinary Lua that returns nil, so a mock
+	-- that raises on it reports bugs that are not there. Blizzard's widget
+	-- methods are PascalCase and this addon's own fields are not, which is a
+	-- good enough line to draw: a mistyped `SetPointt` still raises, while
+	-- `button.reason` behaves the way the client would.
 	return setmetatable(self, {
 		__index = function(_, key)
-			error(("%s (%s) has no method %q"):format(name or "?", kind, tostring(key)), 2)
+			local text = tostring(key)
+			if text:match("^%u") then
+				error(("%s (%s) has no method %q"):format(name or "?", kind, text), 2)
+			end
+			return nil
 		end,
 	})
 end

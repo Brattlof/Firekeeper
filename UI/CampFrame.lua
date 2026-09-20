@@ -271,12 +271,15 @@ local function buildPlaceTab(parent)
 		local selfKey = FK.Roster.SelfKey()
 
 		local covered = FK.Roster:Coverage()
+
+		-- Keyed the way the planner keys them, so "already on the fire" means
+		-- the same thing here as it does in Plan.Evaluate: an Anvil on the fire
+		-- does cover a Sharpening Wheel, because it carries its buff.
 		local onFire = {}
 		for _, entry in ipairs(FK.Camp.placed) do
 			local object = FK.Data.GetObject(entry.objectId)
-			local group = object and FK.Data.EffectiveBuff(object)
-			if group then
-				onFire[group] = object.name
+			if object then
+				onFire[FK.Plan.EffectKey(object)] = object.name
 			end
 		end
 
@@ -304,24 +307,37 @@ local function buildPlaceTab(parent)
 					and C_Item.GetItemIconByID(object.itemId)
 				button.icon:SetTexture(icon or FK.Theme.ICON)
 
-				local group = FK.Data.EffectiveBuff(object)
-				button.detail = group and FK.Data.buffGroups[group]
-					and FK.Data.buffGroups[group].label or "No buff"
+				local carried = FK.Data.EffectiveBuff(object)
+				button.detail = carried and FK.Data.buffGroups[carried]
+					and FK.Data.buffGroups[carried].label or "No buff"
+
+				local effect = object.effect or {}
+				local ownBuff = effect.kind == "buff" and effect.buff or nil
 
 				local tint, reason = FK.Theme.colors.emberDim, nil
 				button.placeable = true
 
+				local raisesCapacity = effect.kind == "slots"
 				if spent then
 					tint, reason = FK.Theme.colors.smoke, "You have already given this fire an object"
+					button.placeable = false
+				elseif not raisesCapacity and plan.used >= plan.capacity then
+					tint, reason = FK.Theme.colors.smoke, "This fire is full"
 					button.placeable = false
 				elseif readyIn > 0 then
 					tint = FK.Theme.colors.smoke
 					reason = "On cooldown for " .. FK.Cooldowns.Format(readyIn)
 					button.placeable = false
-				elseif group and covered[group] then
-					tint, reason = FK.Theme.colors.red, "Wasted: " .. covered[group] .. " already covers it"
-				elseif group and onFire[group] then
-					tint, reason = FK.Theme.colors.red, "Wasted: " .. onFire[group] .. " is already on the fire"
+				elseif ownBuff and covered[ownBuff] then
+					-- Only an object whose *own* effect is the covered buff is
+					-- wasted. A Master Forge carries Strength but is also a
+					-- workspace, and nothing covers that — reddening it told the
+					-- player to skip the very thing the Camp tab was suggesting.
+					tint, reason = FK.Theme.colors.red,
+						"Wasted: " .. covered[ownBuff] .. " already covers it"
+				elseif onFire[FK.Plan.EffectKey(object)] then
+					tint, reason = FK.Theme.colors.red,
+						"Wasted: " .. onFire[FK.Plan.EffectKey(object)] .. " is already on the fire"
 				elseif suggestion and suggestion.objectId == object.id then
 					tint, reason = FK.Theme.colors.green, "The best thing you can place here"
 				end
@@ -403,6 +419,7 @@ end
 local function actionRow(tab, index, onClick)
 	local existing = tab.campRows[index]
 	if existing then
+		existing.onClick = onClick
 		return existing
 	end
 
@@ -418,7 +435,16 @@ local function actionRow(tab, index, onClick)
 
 	row:SetScript("OnEnter", function() FK.Theme.SetTextColor(text, FK.Theme.colors.gold) end)
 	row:SetScript("OnLeave", function() FK.Theme.SetTextColor(text, FK.Theme.colors.text) end)
-	row:SetScript("OnClick", function() onClick(row.camp) end)
+	-- The handler is read off the row rather than captured, because these rows
+	-- are pooled: row 1 is created by the "none heard of yet" branch with a
+	-- no-op, and would have kept it for the rest of the session once real camps
+	-- arrived, leaving the tab's only action silently dead.
+	row.onClick = onClick
+	row:SetScript("OnClick", function()
+		if row.onClick then
+			row.onClick(row.camp)
+		end
+	end)
 
 	tab.campRows[index] = row
 	return row
