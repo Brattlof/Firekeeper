@@ -16,6 +16,7 @@ read_globals = {
 	"CreateFrame",
 	"C_AddOns",
 	"C_ChatInfo",
+	"C_Item",
 	"C_Map",
 	"C_SpellBook",
 	"C_Timer",

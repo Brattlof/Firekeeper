@@ -64,12 +64,21 @@ single-player planner over what you can see and type.
 
 ## The panel
 
-`/fk` opens the camp panel, or left-click the flame on your minimap. The panel is drawn
-by the addon rather than borrowed from a Blizzard template, so it looks the same whatever
-the client ships: charcoal, an ember rule under the title, and a row of pips showing the
-fire's slots — lit for used, dark for free — which is the one thing worth reading from
-across the screen. Drag the title bar to move it; it remembers where you put it. The
-minimap button is draggable around the edge and can be hidden with `/fk minimap`.
+`/fk` opens it, or left-click the flame on your minimap. Everything the addon does is in
+there — the slash commands are a shortcut, not the only way in. Five tabs:
+
+| Tab | What is on it |
+| --- | --- |
+| **Camp** | What is on the fire, who should place what, what would be wasted, who is on cooldown. Announce to chat. |
+| **Place** | Every object *you* can place, as icons. Green is the best choice here, red would be wasted, greyed out means you cannot. Click one to put it on the fire. Start a new three, five or ten slot camp. |
+| **Buffs** | Every camp buff and what would cover it: missing, available from somebody standing here, already on the fire, or already covered by a class buff. Below it, the class buffs your group is missing. |
+| **Find** | Camps other people are hosting, and how far. Host your own. Guildies nearby, with distance and direction, and the switch for sharing your position. |
+| **You** | Your professions and how far the next object is. Legacy ranks. Camp cooldowns across your characters. The minimap button. What this client will and will not let the addon do. |
+
+A row of pips under the title shows the fire's slots at a glance — lit for used, dark for
+free — and scales to the five and ten slot campfires. The panel is drawn by the addon
+rather than borrowed from a Blizzard template, so it looks the same whatever the client
+ships. Drag the title bar to move it; it remembers where you put it.
 
 ## Install
 

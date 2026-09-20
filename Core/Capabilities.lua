@@ -61,6 +61,12 @@ local probes = {
 	end,
 	-- The button hangs off the client's own Minimap frame. Present on
 	-- 1.60.1.69913; probed because a frame is not an API contract.
+	-- Camp object icons on the Place tab. Present on 1.60.1.69913; without it
+	-- every object falls back to the addon's own flame, which is a worse panel
+	-- rather than a broken one.
+	itemIcons = function()
+		return C_Item ~= nil and type(C_Item.GetItemIconByID) == "function"
+	end,
 	minimapFrame = function()
 		return _G.Minimap ~= nil and type(_G.Minimap.GetCenter) == "function"
 	end,

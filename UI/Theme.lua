@@ -123,6 +123,196 @@ function Theme.Button(parent, label, width, onClick)
 	return button
 end
 
+--- A small square button carrying an icon, with a tooltip.
+--
+-- Every action one of these performs is also a labelled button or a row inside
+-- a tab, so a texture this client happens not to have leaves a blank square
+-- rather than an unreachable feature.
+function Theme.IconButton(parent, texture, tooltipTitle, tooltipLine, onClick)
+	local button = CreateFrame("Button", nil, parent)
+	button:SetSize(22, 22)
+
+	local background = Theme.Fill(button, "BACKGROUND", Theme.colors.ashLight)
+	background:SetAllPoints()
+
+	local icon = button:CreateTexture(nil, "ARTWORK")
+	icon:SetPoint("TOPLEFT", 2, -2)
+	icon:SetPoint("BOTTOMRIGHT", -2, 2)
+	icon:SetTexture(texture)
+	icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	button.icon = icon
+
+	local edges = Theme.Border(button, Theme.colors.emberDim, 0.8)
+
+	button:SetScript("OnEnter", function()
+		for _, line in pairs(edges) do
+			line:SetColorTexture(Theme.colors.ember[1], Theme.colors.ember[2], Theme.colors.ember[3], 1)
+		end
+		if GameTooltip then
+			GameTooltip:SetOwner(button, "ANCHOR_BOTTOM")
+			GameTooltip:AddLine(tooltipTitle, 1, 0.55, 0.22)
+			if tooltipLine then
+				GameTooltip:AddLine(tooltipLine, 0.62, 0.60, 0.57, true)
+			end
+			GameTooltip:Show()
+		end
+	end)
+	button:SetScript("OnLeave", function()
+		for _, line in pairs(edges) do
+			line:SetColorTexture(Theme.colors.emberDim[1], Theme.colors.emberDim[2], Theme.colors.emberDim[3], 0.8)
+		end
+		if GameTooltip then
+			GameTooltip:Hide()
+		end
+	end)
+	if onClick then
+		button:SetScript("OnClick", onClick)
+	end
+	return button
+end
+
+--- A row of tabs across the top of a panel's body.
+--
+-- `names` is the order they appear in. `onSelect` is called with the name when
+-- one is clicked, and once immediately for the first.
+function Theme.Tabs(parent, names, onSelect)
+	local strip = CreateFrame("Frame", nil, parent)
+	strip:SetHeight(20)
+	strip.buttons = {}
+
+	local function select(name)
+		for tabName, button in pairs(strip.buttons) do
+			local chosen = tabName == name
+			button.underline:SetShown(chosen)
+			Theme.SetTextColor(button.text, chosen and Theme.colors.ember or Theme.colors.smoke)
+		end
+		strip.selected = name
+		onSelect(name)
+	end
+
+	local x = 0
+	for _, name in ipairs(names) do
+		local button = CreateFrame("Button", nil, strip)
+		local text = Theme.Label(button, "GameFontNormalSmall", Theme.colors.smoke, "CENTER")
+		text:SetPoint("CENTER")
+		text:SetText(name)
+		button.text = text
+
+		local width = math.max(text:GetStringWidth() + 16, 44)
+		button:SetSize(width, 20)
+		button:SetPoint("LEFT", x, 0)
+		x = x + width
+
+		local underline = Theme.Fill(button, "ARTWORK", Theme.colors.ember)
+		underline:SetPoint("BOTTOMLEFT", 4, 0)
+		underline:SetPoint("BOTTOMRIGHT", -4, 0)
+		underline:SetHeight(2)
+		underline:Hide()
+		button.underline = underline
+
+		button:SetScript("OnClick", function() select(name) end)
+		button:SetScript("OnEnter", function()
+			if strip.selected ~= name then
+				Theme.SetTextColor(text, Theme.colors.text)
+			end
+		end)
+		button:SetScript("OnLeave", function()
+			if strip.selected ~= name then
+				Theme.SetTextColor(text, Theme.colors.smoke)
+			end
+		end)
+
+		strip.buttons[name] = button
+	end
+
+	strip:SetWidth(x)
+	strip.Select = function(_, name) select(name) end
+	select(names[1])
+	return strip
+end
+
+--- A labelled on/off row. `getter` is asked every refresh, so the row cannot
+-- drift from the setting it shows.
+function Theme.Toggle(parent, label, getter, setter)
+	local row = CreateFrame("Button", nil, parent)
+	row:SetHeight(18)
+
+	local box = CreateFrame("Frame", nil, row)
+	box:SetSize(12, 12)
+	box:SetPoint("LEFT", 0, 0)
+	local fill = Theme.Fill(box, "ARTWORK", Theme.colors.ash)
+	fill:SetAllPoints()
+	Theme.Border(box, Theme.colors.emberDim, 0.9)
+
+	local text = Theme.Label(row, "GameFontHighlightSmall", Theme.colors.text)
+	text:SetPoint("LEFT", box, "RIGHT", 6, 0)
+	text:SetText(label)
+
+	function row:Refresh()
+		local on = getter() and true or false
+		local colour = on and Theme.colors.ember or Theme.colors.ash
+		fill:SetColorTexture(colour[1], colour[2], colour[3], 1)
+		Theme.SetTextColor(text, on and Theme.colors.text or Theme.colors.smoke)
+	end
+
+	row:SetScript("OnClick", function()
+		setter(not getter())
+		row:Refresh()
+	end)
+	row:SetScript("OnEnter", function() Theme.SetTextColor(text, Theme.colors.gold) end)
+	row:SetScript("OnLeave", function() row:Refresh() end)
+	row:Refresh()
+	return row
+end
+
+--- A labelled box the player can type a number into, with a Set button.
+function Theme.NumberRow(parent, label, getter, setter)
+	local row = CreateFrame("Frame", nil, parent)
+	row:SetHeight(20)
+
+	local text = Theme.Label(row, "GameFontHighlightSmall", Theme.colors.text)
+	text:SetPoint("LEFT", 0, 0)
+	text:SetText(label)
+
+	local box = CreateFrame("EditBox", nil, row)
+	box:SetSize(46, 18)
+	box:SetPoint("LEFT", 150, 0)
+	box:SetAutoFocus(false)
+	box:SetNumeric(true)
+	box:SetMaxLetters(4)
+	box:SetFontObject("GameFontHighlightSmall")
+	box:SetTextInsets(4, 4, 0, 0)
+	local boxFill = Theme.Fill(box, "BACKGROUND", Theme.colors.ash)
+	boxFill:SetAllPoints()
+	Theme.Border(box, Theme.colors.emberDim, 0.8)
+
+	local function commit()
+		local value = tonumber(box:GetText())
+		if value then
+			setter(value)
+		end
+		box:ClearFocus()
+		row:Refresh()
+	end
+
+	box:SetScript("OnEnterPressed", commit)
+	box:SetScript("OnEscapePressed", function()
+		box:ClearFocus()
+		row:Refresh()
+	end)
+
+	local set = Theme.Button(row, "Set", 40, commit)
+	set:SetHeight(18)
+	set:SetPoint("LEFT", box, "RIGHT", 6, 0)
+
+	function row:Refresh()
+		box:SetText(tostring(getter() or 0))
+	end
+
+	row:Refresh()
+	return row
+end
+
 --- A panel: charcoal, hairline bordered, with a title bar carrying the addon's
 -- icon, a title, and a close button. Draggable, and it remembers where it was
 -- put if `positionKey` names a table in the saved variables.
