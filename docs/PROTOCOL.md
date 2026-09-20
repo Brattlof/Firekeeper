@@ -12,6 +12,12 @@ disables comms for the session and keeps planning locally.
 has turned sharing on with `/fk guild share`, which is off by default and survives a
 reload; nothing is sent from inside an instance, where the game gives no position.
 
+The camp channel is joined the first time `/fk find` or `/fk host` is typed, never at
+login. Joining is one of the actions this client refuses to a timer or an event handler, so
+it has to hang off something the player did (FK-19). `JoinChannelByName` is used rather than
+`JoinPermanentChannel`, which would be written into the player's chat settings and can take
+the /1 slot.
+
 `HOST`, `SEEK` and `PACK` are about finding strangers, so they go to the custom channel
 `FirekeeperCamps`, which the addon joins ten seconds after login. Nothing is sent there
 unless the player types `/fk host` or `/fk find`. Outgoing addon chat is permitted realm

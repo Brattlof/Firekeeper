@@ -14,7 +14,8 @@ marked `reported` rather than `confirmed`. Open a
 the client build from `/fk caps`, and that row gets promoted. The Sharpening Wheel is the
 one to settle first: its tooltip says Strength, Blizzard's recap said Attack Power.
 
-Answering a question in [docs/RESEARCH.md](docs/RESEARCH.md) is worth as much. Say which
+Answering a question in [docs/RESEARCH.md](docs/RESEARCH.md) is worth as much, and
+[docs/SOURCES.md](docs/SOURCES.md) says where to look before you log in. Say which
 build you tested on and what happened, including "it did nothing".
 
 ## Code

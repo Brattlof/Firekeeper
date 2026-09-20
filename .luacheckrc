@@ -35,6 +35,7 @@ read_globals = {
 	"IsInGuild",
 	"GameTooltip",
 	"IsInRaid",
+	"JoinChannelByName",
 	"JoinPermanentChannel",
 	"Minimap",
 	"SendChatMessage",

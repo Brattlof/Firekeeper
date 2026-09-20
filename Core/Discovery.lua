@@ -47,6 +47,16 @@ local function outgoingAllowed()
 end
 
 --- The channel's index, joining it the first time we need it.
+--
+-- Only ever call this from something the player did. Joining a channel is one
+-- of the actions the client will refuse to a timer or an event handler — it
+-- answers "blocked from an action only available to the Blizzard UI" — so the
+-- join hangs off `/fk find` and `/fk host` rather than off login
+-- (docs/RESEARCH.md, FK-19).
+--
+-- `JoinChannelByName` is preferred over `JoinPermanentChannel`: the permanent
+-- one is written into the player's chat settings and can take the /1 slot,
+-- which is not ours to spend.
 function Discovery:Channel()
 	if self.channelIndex then
 		return self.channelIndex
@@ -55,7 +65,12 @@ function Discovery:Channel()
 		return nil
 	end
 
-	pcall(_G.JoinPermanentChannel, self.CHANNEL)
+	if type(_G.JoinChannelByName) == "function" then
+		pcall(_G.JoinChannelByName, self.CHANNEL)
+	else
+		pcall(_G.JoinPermanentChannel, self.CHANNEL)
+	end
+
 	local ok, index = pcall(_G.GetChannelName, self.CHANNEL)
 	if ok and type(index) == "number" and index > 0 then
 		self.channelIndex = index
@@ -66,15 +81,33 @@ function Discovery:Channel()
 	return nil
 end
 
-local function send(message)
+--- Sends on the camp channel.
+--
+-- `fromTimer` marks a send the player did not ask for directly. Those are the
+-- ones at risk of being refused, and the first one is written down so we find
+-- out rather than guess (docs/RESEARCH.md, FK-19).
+local recordedTimerSend = false
+
+local function send(message, fromTimer)
 	if not outgoingAllowed() then
 		return false
 	end
 	local index = Discovery:Channel()
 	if not index then
+		if fromTimer and not recordedTimerSend then
+			recordedTimerSend = true
+			FK.Diag("timerSend", "no channel to send on")
+		end
 		return false
 	end
 	local ok, result = pcall(C_ChatInfo.SendAddonMessage, FK.Comm.PREFIX, message, "CHANNEL", index)
+
+	if fromTimer and not recordedTimerSend then
+		recordedTimerSend = true
+		FK.Diag("timerSend", ok and FK.Comm.enumName(Enum and Enum.SendAddonMessageResult, result)
+			or ("threw: " .. tostring(result)))
+	end
+
 	if not ok then
 		FK.Debug("channel send threw; camp discovery is off for this session")
 		return false
@@ -181,7 +214,7 @@ function Discovery:StartHosting()
 	if C_Timer and C_Timer.NewTicker and not self.ticker then
 		self.ticker = C_Timer.NewTicker(self.HOST_INTERVAL, function()
 			if Discovery.hosting then
-				Discovery:Broadcast()
+				Discovery:Broadcast(false, true)
 			end
 		end)
 	end
@@ -197,7 +230,7 @@ function Discovery:StopHosting()
 	send("PACK:")
 end
 
-function Discovery:Broadcast(force)
+function Discovery:Broadcast(force, fromTimer)
 	if not self.hosting then
 		return false
 	end
@@ -209,7 +242,7 @@ function Discovery:Broadcast(force)
 		return false
 	end
 	lastHost = now()
-	return send(payload)
+	return send(payload, fromTimer)
 end
 
 --- Ask who is sitting at a fire. Hosts answer with their own HOST message.
@@ -235,8 +268,11 @@ function Discovery:OnMessage(kind, rest, sender)
 	elseif kind == "SEEK" then
 		-- Answer only if we are hosting: a seeker asking an empty field gets
 		-- silence rather than a round of "not me" from everyone online.
+		--
+		-- This reply comes from an event handler rather than from anything the
+		-- player did, so it is in the same boat as the ticker (FK-19).
 		if self.hosting then
-			self:Broadcast(true)
+			self:Broadcast(true, true)
 		end
 	elseif kind == "PACK" then
 		FK.CampList.Forget(sender)
@@ -317,6 +353,8 @@ local function sendGuild(message)
 	if not (IsInGuild and IsInGuild()) then
 		return false
 	end
+	-- Same caveat as the camp channel: this runs on a ticker, not on anything
+	-- the player did (docs/RESEARCH.md, FK-19).
 	local ok, result = pcall(C_ChatInfo.SendAddonMessage, FK.Comm.PREFIX, message, "GUILD")
 	if not ok then
 		return false
@@ -413,13 +451,7 @@ function Discovery:OnLogin()
 		end
 	end)
 
-	-- Joining takes a moment after login, and there is no point holding up the
-	-- rest of the addon for it.
-	if C_Timer and C_Timer.After then
-		C_Timer.After(10, function()
-			Discovery:Channel()
-		end)
-	end
+	-- Deliberately not joining the channel here. See Discovery:Channel.
 
 	-- Sharing survives a reload, so somebody who turned it on does not have to
 	-- turn it on again every time.
