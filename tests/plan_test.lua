@@ -77,6 +77,35 @@ function tests.a_campfire_upgrade_comes_first_and_buys_slots()
 	t.count(plan.suggestions, 4, "everyone still gets to contribute")
 end
 
+function tests.an_expert_campfire_holds_ten()
+	local plan = Plan.Evaluate({
+		slots = 3,
+		contributors = {
+			contributor("Ana", { "expert_campfire_kit" }),
+			contributor("Bo", { "incense_candle" }),
+			contributor("Cy", { "faction_banner" }),
+			contributor("Di", { "sharpening_wheel" }),
+		},
+	})
+	t.equals(plan.capacity, 10, "the expert fire holds ten")
+	t.count(plan.suggestions, 4, "and everyone fits")
+	-- The fire replaces the basic one rather than taking a slot (FK-2), so ten
+	-- capacity less the three buffs leaves seven.
+	t.equals(plan.free, 7, "with room to spare")
+end
+
+function tests.two_campfires_do_not_both_get_placed()
+	local plan = Plan.Evaluate({
+		slots = 3,
+		contributors = {
+			contributor("Ana", { "expert_campfire_kit" }),
+			contributor("Bo", { "journeyman_campfire_kit" }),
+		},
+	})
+	t.count(plan.suggestions, 1, "one fire is enough")
+	t.equals(plan.suggestions[1].objectId, "expert_campfire_kit", "the bigger one wins")
+end
+
 function tests.objects_already_on_the_fire_are_not_repeated()
 	local plan = Plan.Evaluate({
 		placed = { { player = "Ana", objectId = "incense_candle" } },
