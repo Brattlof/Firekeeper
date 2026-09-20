@@ -97,6 +97,16 @@ end
 -- the cursor rather than lighting up like a Blizzard panel button.
 function Theme.Button(parent, label, width, onClick)
 	local button = CreateFrame("Button", nil, parent)
+	Theme.Dress(button, label, width)
+	if onClick then
+		button:SetScript("OnClick", onClick)
+	end
+	return button
+end
+
+--- Gives an existing button the addon's look. Split out of Theme.Button so a
+-- secure action button, which has to be created with its template, can wear it.
+function Theme.Dress(button, label, width)
 	button:SetSize(width or 130, 22)
 
 	local background = Theme.Fill(button, "BACKGROUND", Theme.colors.ashLight)
@@ -121,9 +131,6 @@ function Theme.Button(parent, label, width, onClick)
 	button:SetScript("OnMouseDown", function() text:SetPoint("CENTER", 1, -1) end)
 	button:SetScript("OnMouseUp", function() text:SetPoint("CENTER", 0, 0) end)
 
-	if onClick then
-		button:SetScript("OnClick", onClick)
-	end
 	return button
 end
 

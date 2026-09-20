@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- **Clicking an object on the Place tab now actually places it.** The buttons are secure
+  action buttons pointed at the item, so your own click uses it — an addon cannot use an
+  item for you, but a button you press yourself can. The "place what is suggested" button
+  on the Camp tab works the same way. On a client without the template the panel still
+  works and records what you tell it, and says so.
+- **The addon notices what you placed instead of being told.** Every camp object casts a
+  spell to put itself down, and the client announces a finished cast, so `/fk place` and
+  the "I placed this" step are no longer needed for the record to be right.
+- **A camp starts itself.** Lighting a campfire kit begins a fresh camp at that capacity,
+  and placing something more than an hour after the last placement is taken as a new fire,
+  since camp buffs last an hour. You should not have to press "new camp".
+
 ## 0.2.1 — 20 September 2026
 
 Fixes for the panel that shipped in 0.2.0, found by reviewing it afterwards.
