@@ -40,6 +40,16 @@ function Theme.Fill(parent, layer, color, alpha)
 	return texture
 end
 
+--- Changes a texture's colour. Goes through the same guard as Theme.Fill, so
+-- the fallback there is either used by everything or by nothing.
+function Theme.Recolor(texture, color, alpha)
+	if texture.SetColorTexture then
+		texture:SetColorTexture(color[1], color[2], color[3], alpha or 1)
+	else
+		texture:SetTexture(color[1], color[2], color[3], alpha or 1)
+	end
+end
+
 --- A one pixel line, used for rules and borders.
 function Theme.Line(parent, color, alpha)
 	return Theme.Fill(parent, "BORDER", color, alpha)
@@ -101,17 +111,11 @@ function Theme.Button(parent, label, width, onClick)
 	button.text = text
 
 	button:SetScript("OnEnter", function()
-		if background.SetColorTexture then
-			local c = Theme.colors.emberDim
-			background:SetColorTexture(c[1], c[2], c[3], 1)
-		end
+		Theme.Recolor(background, Theme.colors.emberDim)
 		setTextColor(text, Theme.colors.gold)
 	end)
 	button:SetScript("OnLeave", function()
-		if background.SetColorTexture then
-			local c = Theme.colors.ashLight
-			background:SetColorTexture(c[1], c[2], c[3], 1)
-		end
+		Theme.Recolor(background, Theme.colors.ashLight)
 		setTextColor(text, Theme.colors.text)
 	end)
 	button:SetScript("OnMouseDown", function() text:SetPoint("CENTER", 1, -1) end)
@@ -146,7 +150,7 @@ function Theme.IconButton(parent, texture, tooltipTitle, tooltipLine, onClick)
 
 	button:SetScript("OnEnter", function()
 		for _, line in pairs(edges) do
-			line:SetColorTexture(Theme.colors.ember[1], Theme.colors.ember[2], Theme.colors.ember[3], 1)
+			Theme.Recolor(line, Theme.colors.ember)
 		end
 		if GameTooltip then
 			GameTooltip:SetOwner(button, "ANCHOR_BOTTOM")
@@ -159,7 +163,7 @@ function Theme.IconButton(parent, texture, tooltipTitle, tooltipLine, onClick)
 	end)
 	button:SetScript("OnLeave", function()
 		for _, line in pairs(edges) do
-			line:SetColorTexture(Theme.colors.emberDim[1], Theme.colors.emberDim[2], Theme.colors.emberDim[3], 0.8)
+			Theme.Recolor(line, Theme.colors.emberDim, 0.8)
 		end
 		if GameTooltip then
 			GameTooltip:Hide()
@@ -250,8 +254,7 @@ function Theme.Toggle(parent, label, getter, setter)
 
 	function row:Refresh()
 		local on = getter() and true or false
-		local colour = on and Theme.colors.ember or Theme.colors.ash
-		fill:SetColorTexture(colour[1], colour[2], colour[3], 1)
+		Theme.Recolor(fill, on and Theme.colors.ember or Theme.colors.ash)
 		Theme.SetTextColor(text, on and Theme.colors.text or Theme.colors.smoke)
 	end
 
@@ -301,11 +304,19 @@ function Theme.NumberRow(parent, label, getter, setter)
 		row:Refresh()
 	end)
 
+	row.box = box
+
 	local set = Theme.Button(row, "Set", 40, commit)
 	set:SetHeight(18)
 	set:SetPoint("LEFT", box, "RIGHT", 6, 0)
 
 	function row:Refresh()
+		-- The panel refreshes every five seconds whether or not you are mid-way
+		-- through typing a rank. Overwriting the box then loses what was being
+		-- entered and moves the caret.
+		if box.HasFocus and box:HasFocus() then
+			return
+		end
 		box:SetText(tostring(getter() or 0))
 	end
 

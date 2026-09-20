@@ -20,7 +20,7 @@ local FRAME_METHODS = {
 	"SetTextColor", "SetJustifyH", "SetTexture", "SetColorTexture",
 	"SetTexCoord", "SetVertexColor", "SetDrawLayer", "SetBlendMode",
 	"SetDesaturated", "SetAutoFocus", "SetNumeric", "SetMaxLetters",
-	"SetFontObject", "SetTextInsets", "ClearFocus", "SetFocus", "HighlightText",
+	"SetFontObject", "SetTextInsets", "HighlightText",
 	"SetHitRectInsets", "SetIgnoreParentScale",
 }
 
@@ -42,6 +42,12 @@ function Mock.widget(kind, name, counters)
 	function self.GetStringWidth() return 40 end
 	function self.SetText(s, value) s.__text = tostring(value) end
 	function self.GetText(s) return s.__text or "0" end
+	-- EditBox focus, so a test can type into a box and check the five-second
+	-- refresh does not wipe what is being typed.
+	function self.HasFocus(s) return s.__focused == true end
+	function self.SetFocus(s) s.__focused = true end
+	function self.ClearFocus(s) s.__focused = false end
+
 	function self.SetScript(s, event, handler) s.__scripts[event] = handler end
 	function self.GetScript(s, event) return s.__scripts[event] end
 

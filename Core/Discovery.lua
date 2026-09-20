@@ -346,10 +346,24 @@ end
 
 --- Camps we have heard about lately, nearest first, with our own layer
 -- attached so the panel can say which of them you could actually walk to.
+-- The layer costs up to 180 unit calls to work out, and `Found` runs on the
+-- panel's five-second ticker. It cannot change without the player zoning, so a
+-- short memory is plenty, and the diagnostics only need writing once.
+local layerCache, layerCachedAt, layerRecorded = nil, -1, false
+local LAYER_CACHE_SECONDS = 15
+
 function Discovery.Found()
-	local layer, fromUnit = Discovery.Layer()
-	FK.Diag("layer", layer or "not readable")
-	FK.Diag("layerFromUnitType", fromUnit or "none")
+	local layer = layerCache
+	if (now() - layerCachedAt) >= LAYER_CACHE_SECONDS then
+		local fromUnit
+		layer, fromUnit = Discovery.Layer()
+		layerCache, layerCachedAt = layer, now()
+		if not layerRecorded then
+			layerRecorded = true
+			FK.Diag("layer", layer or "not readable")
+			FK.Diag("layerFromUnitType", fromUnit or "none")
+		end
+	end
 
 	local found = FK.CampList.Active(now(), Discovery.Position())
 	for _, camp in ipairs(found) do
