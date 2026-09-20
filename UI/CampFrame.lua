@@ -339,7 +339,7 @@ local function buildPlaceTab(parent)
 
 		if #objects == 0 then
 			footer:SetText(colored("8a8a8a",
-				"Set a profession on the You tab if the game will not tell us."))
+				"Set one on the You tab if the game will not tell us which you have."))
 		elseif spent then
 			footer:SetText(colored("8a8a8a", "You have already contributed to this fire."))
 		elseif readyIn > 0 then
@@ -399,10 +399,45 @@ end
 
 -- Tab: Find -------------------------------------------------------------
 
+--- A full-width clickable row, for lists whose entries do something.
+local function actionRow(tab, index, onClick)
+	local existing = tab.campRows[index]
+	if existing then
+		return existing
+	end
+
+	local row = CreateFrame("Button", nil, tab)
+	row:SetHeight(ROW_HEIGHT)
+	row:SetPoint("TOPLEFT", 0, -(index - 1) * ROW_HEIGHT - 16)
+	row:SetPoint("RIGHT", tab, "RIGHT", 0, 0)
+
+	local text = FK.Theme.Label(row, "GameFontHighlightSmall", FK.Theme.colors.text)
+	text:SetPoint("LEFT")
+	text:SetPoint("RIGHT")
+	row.text = text
+
+	row:SetScript("OnEnter", function() FK.Theme.SetTextColor(text, FK.Theme.colors.gold) end)
+	row:SetScript("OnLeave", function() FK.Theme.SetTextColor(text, FK.Theme.colors.text) end)
+	row:SetScript("OnClick", function() onClick(row.camp) end)
+
+	tab.campRows[index] = row
+	return row
+end
+
 local function buildFindTab(parent)
 	local tab = CreateFrame("Frame", nil, parent)
 	tab:SetAllPoints()
-	local list = lineList(tab)
+	tab.campRows = {}
+
+	local heading = FK.Theme.Label(tab, "GameFontNormalSmall", FK.Theme.colors.gold)
+	heading:SetPoint("TOPLEFT", 0, 0)
+	heading:SetText("Camps people are hosting")
+
+	-- The guildie half is plain text; only the camps do something when clicked.
+	local guildHolder = CreateFrame("Frame", nil, tab)
+	guildHolder:SetPoint("TOPLEFT", 0, -140)
+	guildHolder:SetPoint("BOTTOMRIGHT", 0, 50)
+	local list = lineList(guildHolder)
 
 	local host = FK.Theme.Button(tab, "Host this fire", 120, function()
 		if FK.Discovery.hosting then
@@ -431,29 +466,49 @@ local function buildFindTab(parent)
 	share:SetPoint("RIGHT", tab, "RIGHT", 0, 0)
 	tab.share = share
 
+	local function waypoint(camp)
+		if not camp then
+			return
+		end
+		if FK.Discovery.Waypoint(camp) then
+			FK.Print("waypoint set on %s's camp.", camp.host)
+		else
+			FK.Print("%s's camp is at |cffffff00%.0f, %.0f|r (no waypoint on this client).",
+				camp.host, camp.x * 100, camp.y * 100)
+		end
+	end
+
 	function tab:Refresh()
 		host.text:SetText(FK.Discovery.hosting and "Stop hosting" or "Host this fire")
 		share:Refresh()
 
-		local lines = { colored("fad161", "Camps people are hosting") }
 		local found = FK.Discovery.Found()
-		if #found == 0 then
-			table.insert(lines, colored("8a8a8a", "  none heard of yet"))
-		else
-			for position, camp in ipairs(found) do
+		local shown = math.min(#found, 7)
+		for index = 1, math.max(#self.campRows, math.max(shown, 1)) do
+			local camp = found[index]
+			if camp then
+				local row = actionRow(self, index, waypoint)
+				row.camp = camp
 				local where = camp.sameMap and ("%.0f, %.0f"):format(camp.x * 100, camp.y * 100)
 					or "another map"
 				if camp.otherLayer then
 					where = where .. colored("ff8c38", " (another layer)")
 				end
-				table.insert(lines, ("  %d. %s — %d of %d free, %s"):format(
-					position, camp.host, camp.free, camp.slots, where))
+				row.text:SetText(("  %s — %d of %d free, %s"):format(
+					camp.host, camp.free, camp.slots, where))
+				FK.Theme.SetTextColor(row.text, FK.Theme.colors.text)
+				row:Show()
+			elseif index == 1 then
+				local row = actionRow(self, index, function() end)
+				row.camp = nil
+				row.text:SetText(colored("8a8a8a", "  none heard of yet"))
+				row:Show()
+			elseif self.campRows[index] then
+				self.campRows[index]:Hide()
 			end
-			table.insert(lines, colored("8a8a8a", "  /fk find <number> puts a waypoint on one"))
 		end
 
-		table.insert(lines, " ")
-		table.insert(lines, colored("fad161", "Guildies nearby"))
+		local lines = { colored("fad161", "Guildies nearby") }
 		local guildies = FK.Discovery.Guildies()
 		if #guildies == 0 then
 			table.insert(lines, colored("8a8a8a", "  nobody is sharing"))
@@ -512,9 +567,67 @@ local function buildYouTab(parent)
 	local debugToggle = FK.Theme.Toggle(tab, "Print debug messages",
 		function() return FK.db.debug end,
 		function(on) FK.db.debug = on end)
-	debugToggle:SetPoint("TOPLEFT", 0, nextY(24))
+	debugToggle:SetPoint("TOPLEFT", 0, nextY(22))
 	debugToggle:SetPoint("RIGHT", tab, "RIGHT", 0, 0)
 	tab.debugToggle = debugToggle
+
+	-- Setting a profession by hand is the fallback for when the game will not
+	-- tell us, which is exactly the moment you should not have to go and find a
+	-- slash command. The name cycles rather than being typed, because there are
+	-- only twelve of them and none of them is worth misspelling.
+	local chosen = 1
+	local setter = CreateFrame("Frame", nil, tab)
+	setter:SetHeight(20)
+	setter:SetPoint("TOPLEFT", 0, nextY(26))
+	setter:SetPoint("RIGHT", tab, "RIGHT", 0, 0)
+
+	local label = FK.Theme.Label(setter, "GameFontHighlightSmall", FK.Theme.colors.text)
+	label:SetPoint("LEFT", 0, 0)
+	label:SetText("Set a profession")
+
+	local name = FK.Theme.Button(setter, FK.Data.professions[chosen], 104, nil)
+	name:SetHeight(18)
+	name:SetPoint("LEFT", 104, 0)
+	name:SetScript("OnClick", function()
+		chosen = chosen % #FK.Data.professions + 1
+		name.text:SetText(FK.Data.professions[chosen])
+	end)
+
+	local skill = CreateFrame("EditBox", nil, setter)
+	skill:SetSize(40, 18)
+	skill:SetPoint("LEFT", name, "RIGHT", 6, 0)
+	skill:SetAutoFocus(false)
+	skill:SetNumeric(true)
+	skill:SetMaxLetters(3)
+	skill:SetFontObject("GameFontHighlightSmall")
+	skill:SetTextInsets(4, 4, 0, 0)
+	local skillFill = FK.Theme.Fill(skill, "BACKGROUND", FK.Theme.colors.ash)
+	skillFill:SetAllPoints()
+	FK.Theme.Border(skill, FK.Theme.colors.emberDim, 0.8)
+
+	local function applyProfession()
+		local value = tonumber(skill:GetText())
+		if value then
+			local profession = FK.Data.professions[chosen]
+			FK.Professions:Set(profession, value)
+			FK.Print("%s set to %d.", profession, value)
+			if FK.Comm then
+				FK.Comm:Announce(true)
+			end
+		end
+		skill:ClearFocus()
+		FK.UI:Refresh()
+	end
+
+	skill:SetScript("OnEnterPressed", applyProfession)
+	skill:SetScript("OnEscapePressed", function() skill:ClearFocus() end)
+
+	local apply = FK.Theme.Button(setter, "Set", 40, applyProfession)
+	apply:SetHeight(18)
+	apply:SetPoint("LEFT", skill, "RIGHT", 6, 0)
+	tab.professionSetter = setter
+	tab.professionName = name
+	tab.professionSkill = skill
 
 	tab.listTop = y
 
@@ -527,7 +640,7 @@ local function buildYouTab(parent)
 		local lines = { colored("fad161", "Your professions") }
 		local entries = FK.Route.Evaluate(FK.Professions.known)
 		if #entries == 0 then
-			table.insert(lines, colored("8a8a8a", "  none detected — /fk prof Blacksmithing 145"))
+			table.insert(lines, colored("8a8a8a", "  none detected — set one above"))
 		else
 			for _, entry in ipairs(entries) do
 				table.insert(lines, "  " .. FK.Route.Line(entry))

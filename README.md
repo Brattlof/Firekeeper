@@ -72,8 +72,8 @@ there — the slash commands are a shortcut, not the only way in. Five tabs:
 | **Camp** | What is on the fire, who should place what, what would be wasted, who is on cooldown. Announce to chat. |
 | **Place** | Every object *you* can place, as icons. Green is the best choice here, red would be wasted, greyed out means you cannot. Click one to put it on the fire. Start a new three, five or ten slot camp. |
 | **Buffs** | Every camp buff and what would cover it: missing, available from somebody standing here, already on the fire, or already covered by a class buff. Below it, the class buffs your group is missing. |
-| **Find** | Camps other people are hosting, and how far. Host your own. Guildies nearby, with distance and direction, and the switch for sharing your position. |
-| **You** | Your professions and how far the next object is. Legacy ranks. Camp cooldowns across your characters. The minimap button. What this client will and will not let the addon do. |
+| **Find** | Camps other people are hosting, and how far — click one to put a waypoint on it. Host your own. Guildies nearby, with distance and direction, and the switch for sharing your position. |
+| **You** | Your professions and how far the next object is, and a box to set one by hand when the game will not say. Legacy ranks. Camp cooldowns across your characters. The minimap button. What this client will and will not let the addon do. |
 
 A row of pips under the title shows the fire's slots at a glance — lit for used, dark for
 free — and scales to the five and ten slot campfires. The panel is drawn by the addon
