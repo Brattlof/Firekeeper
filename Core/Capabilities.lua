@@ -76,6 +76,15 @@ local probes = {
 		button:Hide()
 		return type(button.SetAttribute) == "function"
 	end,
+	-- Whether the panel can tell you are empty-handed, rather than offering you
+	-- an object you have none of.
+	bagCounts = function()
+		if C_Item == nil or type(C_Item.GetItemCount) ~= "function" then
+			return false
+		end
+		local ok, count = pcall(C_Item.GetItemCount, 6948) -- Hearthstone
+		return ok and type(count) == "number"
+	end,
 	itemIcons = function()
 		return C_Item ~= nil and type(C_Item.GetItemIconByID) == "function"
 	end,

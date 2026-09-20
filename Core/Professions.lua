@@ -83,9 +83,61 @@ function Professions:PlaceableObjects()
 	return placeable
 end
 
+--- How many of this object are in your bags, or nil if the client will not say.
+--
+-- Skill says what you could make. It does not say what you are carrying, and
+-- the two are very different at a campfire: an empty-handed blacksmith was
+-- being offered a Sharpening Wheel by the panel and advertised as able to place
+-- one to the whole group.
+function Professions.CountOf(object)
+	if not object or not C_Item or type(C_Item.GetItemCount) ~= "function" then
+		return nil
+	end
+	local faction = UnitFactionGroup and UnitFactionGroup("player") or nil
+	local itemId = FK.Data.ItemIdFor(object, faction)
+	if not itemId then
+		return nil
+	end
+	local ok, count = pcall(C_Item.GetItemCount, itemId)
+	if not ok or type(count) ~= "number" then
+		return nil
+	end
+	return count
+end
+
+--- The objects you could make *and* are actually carrying.
+-- Returns nil when bag counts cannot be read at all, so a caller can tell the
+-- difference between "you have none" and "we cannot see your bags".
+function Professions:CarriedObjects()
+	local placeable = self:PlaceableObjects()
+	local readable = false
+	local carried = {}
+
+	for _, object in ipairs(placeable) do
+		local count = Professions.CountOf(object)
+		if count ~= nil then
+			readable = true
+			if count > 0 then
+				table.insert(carried, object)
+			end
+		end
+	end
+
+	if not readable then
+		return nil
+	end
+	return carried
+end
+
+--- What to tell the group you can put on the fire.
+--
+-- What you are carrying when the client will say, and what your skill allows
+-- when it will not — telling people you can place something you do not have
+-- makes the planner assign you a slot you cannot fill.
 function Professions:PlaceableIds()
+	local objects = self:CarriedObjects() or self:PlaceableObjects()
 	local ids = {}
-	for _, object in ipairs(self:PlaceableObjects()) do
+	for _, object in ipairs(objects) do
 		table.insert(ids, object.id)
 	end
 	return ids

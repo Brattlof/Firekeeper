@@ -169,7 +169,20 @@ function Mock.install(world)
 		NewTicker = function() return { Cancel = function() end } end,
 		After = function() end,
 	}
-	_G.C_Item = { GetItemIconByID = function() return "Interface\\Icons\\INV_Misc_Bag_08" end }
+	-- `world.bags` maps item id to how many you carry; absent means one of
+	-- each, and `world.noBagCounts` models a client that will not say.
+	_G.C_Item = {
+		GetItemIconByID = function() return "Interface\Icons\INV_Misc_Bag_08" end,
+		GetItemCount = function(itemId)
+			if world.noBagCounts then
+				error("bag counts unavailable", 2)
+			end
+			if world.bags then
+				return world.bags[itemId] or 0
+			end
+			return 1
+		end,
+	}
 	_G.C_UnitAuras = { GetAuraDataByIndex = function() return nil end }
 	_G.time = _G.time or function() return 1758000000 end
 
