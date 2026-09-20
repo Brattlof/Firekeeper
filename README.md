@@ -32,6 +32,10 @@ On cooldown
   Field Guide.
 - **Announces the camp** to party, raid, or say, so people know what is up and how many
   slots are free.
+- **Names the buffs you are missing.** `/fk buffs` reads what everyone at the fire is
+  actually carrying and says who can fix it, which is also how the planner knows a camp
+  object would be wasted. When the client will not show auras it says so instead of
+  guessing.
 - **Says what it does not know.** `/fk gaps` lists the camp objects still missing from
   the data and `/fk caps` prints which APIs this client actually allows.
 
@@ -62,10 +66,11 @@ uses is not confirmed yet; it is the one the client writes its `WTF` directory i
 | Command | What it does |
 | --- | --- |
 | `/fk` | Open the camp panel |
-| `/fk new [slots]` | Start a fresh camp, default three slots |
+| `/fk new [slots\|campfire]` | Start a fresh camp: a number, or `basic`, `journeyman`, `expert` |
 | `/fk place <object>` | Record what you put on the fire |
 | `/fk plan` | Print the suggested placements |
 | `/fk announce` | Post the camp to party, raid, or say |
+| `/fk buffs` | Class buffs your group is missing, and who can cast them |
 | `/fk cd` | Camp cooldowns for all your characters |
 | `/fk prof <name> <skill>` | Set a profession by hand, if the API will not tell us |
 | `/fk legacy fieldGuide <rank>` | Record Legacy ranks that change camp maths |
