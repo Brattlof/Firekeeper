@@ -25,8 +25,16 @@ build you tested on and what happened, including "it did nothing".
 - Lua 5.1, tabs for indentation, no external libraries. The addon deliberately has no
   dependencies: a new client is a bad place to inherit someone else's compatibility
   problems.
-- Game logic that can be written without the WoW API belongs in `Core/Plan.lua` or
-  `Core/Cooldowns.lua`, where it can be tested. Run the tests with `lua5.1 tests/run.lua`.
+- Game logic that can be written without the WoW API belongs in a pure module like
+  `Core/Plan.lua` or `Core/Cooldowns.lua`, where it can be tested. Run the tests with
+  `lua5.1 tests/run.lua`.
+- Code that draws frames or reads units is tested too, against `tests/wowmock.lua` — see
+  `tests/ui_test.lua` and `tests/group_test.lua`. The mock **raises on any method it does
+  not know**, which is the point: a mock that accepts anything proves nothing. It cannot
+  tell you the panel looks right, only that it draws, redraws without leaving stale rows,
+  and that clicking things reaches the addon. That is the half which fails silently,
+  because `UI:Refresh` wraps each tab in a `pcall` and a broken tab simply does not
+  appear.
 - Anything that calls an API not proven to exist on Forever needs a probe in
   `Core/Capabilities.lua`, a fallback, and a row in `docs/RESEARCH.md`.
 - `luacheck .` must be clean. CI runs it on every push.
