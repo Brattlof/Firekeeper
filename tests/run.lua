@@ -23,6 +23,7 @@ for _, file in ipairs({
 	"Data/BuffGroups.lua",
 	"Data/CampObjects.lua",
 	"Data/ClassBuffs.lua",
+	"Core/Wire.lua",
 	"Core/Plan.lua",
 	"Core/Buffs.lua",
 	"Core/CampList.lua",
@@ -56,7 +57,7 @@ function t.count(list, expected, message)
 	return t.equals(#list, expected, message)
 end
 
-local suites = { "data_test", "plan_test", "buffs_test", "camplist_test", "nearby_test", "route_test", "cooldowns_test" }
+local suites = { "data_test", "wire_test", "plan_test", "buffs_test", "camplist_test", "nearby_test", "route_test", "cooldowns_test" }
 
 for _, suite in ipairs(suites) do
 	local chunk = assert(loadfile(root .. "/tests/" .. suite .. ".lua"))
