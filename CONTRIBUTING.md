@@ -5,7 +5,7 @@
 Camp objects you have seen in game. Open a
 [camp object sighting](../../issues/new?template=camp-object.yml) with the tooltip text
 and the client build from `/fk caps`. All thirty-six objects are named now, but
-twenty-six of them are only a name: nobody has reported what they actually do. `/fk gaps`
+twenty-four of them are only a name: nobody has reported what they actually do. `/fk gaps`
 prints that list.
 
 Answering a question in [docs/RESEARCH.md](docs/RESEARCH.md) is worth as much. Say which

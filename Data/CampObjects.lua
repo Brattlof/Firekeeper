@@ -66,7 +66,7 @@ FK.Data.campObjects = {
 		source = "trainer",
 		effect = { kind = "buff", buff = "attack_power" },
 		confidence = "reported",
-		note = "Sources disagree: one calls this Attack Power, another Strength. Needs a tooltip.",
+		note = "Three guides and Blizzard's deep dive recap say Attack Power; the beta database reportedly says level-scaled Strength, exclusive with Strength of Earth Totem. A tooltip settles it.",
 	},
 	{
 		id = "anvil",
@@ -220,8 +220,9 @@ FK.Data.campObjects = {
 		tier = 1,
 		skill = 20,
 		source = "trainer",
-		effect = { kind = "unknown" },
+		effect = { kind = "buff", buff = "attack_power" },
 		confidence = "reported",
+		note = "Melee Attack Power, exclusive with Blessing of Might, per two guides.",
 	},
 	{
 		id = "rock_garden",
@@ -341,9 +342,9 @@ FK.Data.campObjects = {
 		tier = 1,
 		skill = 20,
 		source = "trainer",
-		effect = { kind = "unknown" },
+		effect = { kind = "buff", buff = "stamina" },
 		confidence = "reported",
-		note = "Earlier guides called this the Camping Kit.",
+		note = "Stamina, exclusive with Power Word: Fortitude, per two guides. Earlier guides called this the Camping Kit.",
 	},
 	{
 		id = "toxin_study",

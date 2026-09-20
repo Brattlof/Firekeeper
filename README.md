@@ -51,7 +51,7 @@ On cooldown
 Early, and honest about it. Forever's beta opened on 17 September 2026 and the game
 launches on 4 November 2026. Two things are still unsettled:
 
-1. **The data.** All thirty-six camp objects are named, but only four of their effects
+1. **The data.** All thirty-six camp objects are named, but only twelve of their effects
    come from a source worth citing. Every entry in `Data/CampObjects.lua` carries a
    confidence level, and anything not yet seen in game is marked with a `?` in the
    panel. See [docs/DATA.md](docs/DATA.md).

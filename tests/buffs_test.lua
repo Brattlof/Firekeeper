@@ -105,6 +105,14 @@ function tests.an_observed_aura_covers_a_camp_buff_group()
 	t.equals(covered.spirit, nil, "nothing covers Spirit, so a banner is still worth placing")
 end
 
+function tests.fortitude_covers_the_camp_stamina_buff()
+	-- The First Aid Kit gives Stamina and does not stack with Power Word:
+	-- Fortitude, so a priest who has actually cast it makes the kit a wasted
+	-- slot.
+	local covered = Buffs.ObservedCoverage({ member("Ana", "PRIEST", { "Prayer of Fortitude" }) })
+	t.equals(covered.stamina, "Prayer of Fortitude", "the group version covers it too")
+end
+
 function tests.observed_coverage_ignores_players_we_could_not_read()
 	local covered = Buffs.ObservedCoverage({ member("Ana", "MAGE", nil) })
 	t.equals(covered.intellect, nil, "an unread mage proves nothing")
