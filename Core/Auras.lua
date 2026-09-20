@@ -23,8 +23,6 @@ FK.Auras = Auras
 
 local MAX_AURAS = 40
 
-local isSecret = _G.issecretvalue or function() return false end
-
 Auras.lastGood = {} -- player key -> { ["Arcane Intellect"] = true }
 Auras.stale = false
 
@@ -41,7 +39,7 @@ function Auras.ReadUnit(unit)
 			return nil
 		end
 		-- Order matters: a secret value is tested before it is compared to nil.
-		if isSecret(aura) then
+		if FK.IsSecret(aura) then
 			return nil
 		end
 		if aura == nil then
@@ -49,7 +47,7 @@ function Auras.ReadUnit(unit)
 		end
 
 		local name = aura.name
-		if isSecret(name) then
+		if FK.IsSecret(name) then
 			return nil
 		end
 		if type(name) == "string" then
@@ -61,7 +59,7 @@ end
 
 --- The group as Core/Buffs.lua wants it: name, class, level and auras.
 function Auras:Snapshot()
-	local members, stale = {}, false
+	local members, stale, seen = {}, false, {}
 
 	-- `isSelf` is passed in rather than asked of UnitIsUnit, which is marked
 	-- SecretWhenUnitComparisonRestricted: the loop already knows which unit is
@@ -70,18 +68,21 @@ function Auras:Snapshot()
 		if not UnitExists(unit) then
 			return
 		end
-		local name, realm = UnitName(unit)
-		if isSecret(name) then
-			return -- UnitName can be secret too; that player stays out of the list
-		end
-		local key = FK.Roster.PlayerKey(name, realm)
-		if not key then
+		local ok, name, realm = pcall(UnitName, unit)
+		if not ok then
 			return
 		end
+		-- PlayerKey tests both returns for secrecy; a player we cannot name
+		-- stays out of the list rather than being guessed at.
+		local key = FK.Roster.PlayerKey(name, realm)
+		if not key or seen[key] then
+			return -- in a raid, raidN is also you, and once is enough
+		end
+		seen[key] = true
 
 		local _, class = UnitClass(unit)
 		local level = UnitLevel and UnitLevel(unit) or nil
-		if isSecret(level) then
+		if FK.IsSecret(level) then
 			level = nil
 		end
 
@@ -107,8 +108,11 @@ function Auras:Snapshot()
 	add("player", true)
 	if FK.Capabilities.Has("groupRoster") then
 		local count = GetNumGroupMembers() or 0
-		local prefix = IsInRaid and IsInRaid() and "raid" or "party"
-		for index = 1, math.max(count - 1, 0) do
+		local inRaid = IsInRaid and IsInRaid()
+		local prefix = inRaid and "raid" or "party"
+		-- raid tokens run 1..N and include you; party tokens run 1..N-1 and do
+		-- not. Using the party bound in a raid dropped the last member.
+		for index = 1, inRaid and count or math.max(count - 1, 0) do
 			add(prefix .. index)
 		end
 	end

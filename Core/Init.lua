@@ -77,6 +77,21 @@ local function applyDefaults(target, source)
 	end
 end
 
+--- Is this value one the client refuses to let an addon look at?
+--
+-- On this client a secret value cannot be compared, concatenated, used in
+-- arithmetic or used as a table key, and even a truth test on one may throw
+-- (.claude/rules/wow-lua.md). Anything coming out of UnitName, UnitGUID or
+-- aura data has to pass through here before it is touched.
+local secretTest = _G.issecretvalue
+function FK.IsSecret(value)
+	if not secretTest then
+		return false
+	end
+	local ok, secret = pcall(secretTest, value)
+	return ok and secret == true
+end
+
 --- Writes down a fact about this session.
 --
 -- We cannot see the game, and WoW chat cannot be copied, so the only reliable
