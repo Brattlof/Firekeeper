@@ -35,6 +35,8 @@ On cooldown
 - **Finds a fire.** `/fk host` tells other Firekeeper users where your camp is and how
   many slots are free; `/fk find` lists the ones you have heard about, nearest first, and
   `/fk find 2` drops the game's own waypoint on one. Hosting is off until you ask for it.
+- **Finds your guild.** `/fk guild` lists guildies running Firekeeper with the distance
+  in yards and which way to walk. Sharing your own position is off until you turn it on.
 - **Names the buffs you are missing.** `/fk buffs` reads what everyone at the fire is
   actually carrying and says who can fix it, which is also how the planner knows a camp
   object would be wasted. When the client will not show auras it says so instead of
@@ -75,6 +77,7 @@ uses is not confirmed yet; it is the one the client writes its `WTF` directory i
 | `/fk announce` | Post the camp to party, raid, or say |
 | `/fk find [n]` | Camps other people are hosting; a number sets a waypoint |
 | `/fk host` | Tell people where this fire is, or stop |
+| `/fk guild [share]` | Guildies nearby, and whether you share your own spot |
 | `/fk buffs` | Class buffs your group is missing, and who can cast them |
 | `/fk cd` | Camp cooldowns for all your characters |
 | `/fk prof <name> <skill>` | Set a profession by hand, if the API will not tell us |

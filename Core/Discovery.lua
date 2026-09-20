@@ -205,6 +205,17 @@ function Discovery:OnMessage(kind, rest, sender)
 		if FK.UI and FK.UI.Refresh then
 			FK.UI:Refresh()
 		end
+	elseif kind == "POS" then
+		local mapID, x, y = tostring(rest):match("^(%d+)|(%d+)|(%d+)$")
+		if mapID then
+			FK.Nearby.Upsert(sender, {
+				uiMapID = tonumber(mapID),
+				x = tonumber(x) / 10000,
+				y = tonumber(y) / 10000,
+			}, now())
+		end
+	elseif kind == "GONE" then
+		FK.Nearby.Forget(sender)
 	end
 end
 
@@ -227,6 +238,88 @@ function Discovery.Found()
 	return FK.CampList.Active(now(), Discovery.Position())
 end
 
+-- Guildies -----------------------------------------------------------------
+--
+-- The same trick as hosting, over the guild channel instead of the open one:
+-- the game will not say where anyone else is, so everyone who opts in says
+-- where they are. Sharing is off until the player turns it on, because a
+-- position is the one genuinely personal thing this addon could broadcast.
+
+Discovery.SHARE_INTERVAL = 30
+
+local function sendGuild(message)
+	if not outgoingAllowed() then
+		return false
+	end
+	if not (IsInGuild and IsInGuild()) then
+		return false
+	end
+	return (pcall(C_ChatInfo.SendAddonMessage, FK.Comm.PREFIX, message, "GUILD"))
+end
+
+--- The width and height of the player's map in yards, which is the only way
+-- a map fraction becomes a distance worth printing.
+function Discovery.WorldSize(uiMapID)
+	if not uiMapID or not C_Map or type(C_Map.GetMapWorldSize) ~= "function" then
+		return nil
+	end
+	local ok, width, height = pcall(C_Map.GetMapWorldSize, uiMapID)
+	if not ok or type(width) ~= "number" or type(height) ~= "number" then
+		return nil
+	end
+	return { width = width, height = height }
+end
+
+function Discovery.ZoneName(uiMapID)
+	if not uiMapID or not C_Map or type(C_Map.GetMapInfo) ~= "function" then
+		return nil
+	end
+	local ok, info = pcall(C_Map.GetMapInfo, uiMapID)
+	return ok and type(info) == "table" and info.name or nil
+end
+
+function Discovery:SharePosition()
+	if not (FK.db and FK.db.shareWithGuild) then
+		return false
+	end
+	local position = Discovery.Position()
+	if not position then
+		return false -- indoors or in an instance: say nothing rather than a stale spot
+	end
+	return sendGuild(("POS:%d|%d|%d"):format(
+		position.uiMapID,
+		math.floor(position.x * 10000 + 0.5),
+		math.floor(position.y * 10000 + 0.5)))
+end
+
+function Discovery:SetSharing(enabled)
+	FK.db.shareWithGuild = enabled and true or false
+
+	if self.shareTicker then
+		self.shareTicker:Cancel()
+		self.shareTicker = nil
+	end
+
+	if not FK.db.shareWithGuild then
+		sendGuild("GONE:")
+		return false
+	end
+
+	self:SharePosition()
+	if C_Timer and C_Timer.NewTicker then
+		self.shareTicker = C_Timer.NewTicker(self.SHARE_INTERVAL, function()
+			Discovery:SharePosition()
+		end)
+	end
+	return true
+end
+
+--- Guildies running Firekeeper who are sharing, nearest first.
+function Discovery.Guildies()
+	local from = Discovery.Position()
+	return FK.Nearby.Active(now(), from, from and Discovery.WorldSize(from.uiMapID) or nil)
+end
+
 function Discovery:OnLogin()
 	if not FK.Capabilities.Has("addonComm") then
 		return
@@ -238,7 +331,8 @@ function Discovery:OnLogin()
 			return
 		end
 		local kind, rest = tostring(message):match("^(%u+):(.*)$")
-		if kind ~= "HOST" and kind ~= "SEEK" and kind ~= "PACK" then
+		if kind ~= "HOST" and kind ~= "SEEK" and kind ~= "PACK"
+			and kind ~= "POS" and kind ~= "GONE" then
 			return
 		end
 		local name = Ambiguate and Ambiguate(sender, "none") or sender
@@ -253,5 +347,11 @@ function Discovery:OnLogin()
 		C_Timer.After(10, function()
 			Discovery:Channel()
 		end)
+	end
+
+	-- Sharing survives a reload, so somebody who turned it on does not have to
+	-- turn it on again every time.
+	if FK.db and FK.db.shareWithGuild then
+		Discovery:SetSharing(true)
 	end
 end
