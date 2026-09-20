@@ -25,24 +25,58 @@ local function channel()
 	return nil
 end
 
+--- The name of a value in an Enum table, for a log line a human can read.
+-- `Enum.SendAddonMessageResult.Success` is 0, and "0" tells nobody anything.
+local function enumName(enum, value)
+	if type(enum) ~= "table" then
+		return tostring(value)
+	end
+	for name, candidate in pairs(enum) do
+		if candidate == value then
+			return ("%s (%s)"):format(name, tostring(value))
+		end
+	end
+	return tostring(value)
+end
+
+Comm.enumName = enumName
+
+-- The first send of the session is the one worth writing down: it is the real
+-- answer to FK-4, where a capability probe can only guess.
+local recordedFirstSend = false
+
 local function send(message)
 	if not FK.Capabilities.Has("addonComm") then
 		return false
 	end
 	local target = channel()
 	if not target then
+		if not recordedFirstSend then
+			recordedFirstSend = true
+			FK.Diag("firstSend", "not sent: in no group, guild or raid")
+		end
 		return false
 	end
 	-- A throw means the API is unusable here. Throttling, lockdown and the like come
 	-- back as a result code instead, and only mean this one message did not go.
 	local ok, result = pcall(C_ChatInfo.SendAddonMessage, Comm.PREFIX, message, target)
+
+	if not recordedFirstSend then
+		recordedFirstSend = true
+		if ok then
+			FK.Diag("firstSend", ("%s to %s"):format(enumName(Enum and Enum.SendAddonMessageResult, result), target))
+		else
+			FK.Diag("firstSend", "threw: " .. tostring(result))
+		end
+	end
+
 	if not ok then
 		FK.Debug("SendAddonMessage failed; falling back to local-only mode")
 		FK.Capabilities.results.addonComm = false
 		return false
 	end
 	if result ~= Enum.SendAddonMessageResult.Success then
-		FK.Debug("addon message not sent, result %s", tostring(result))
+		FK.Debug("addon message not sent, result %s", enumName(Enum.SendAddonMessageResult, result))
 		return false
 	end
 	return true
@@ -127,6 +161,7 @@ function Comm:OnLogin()
 
 	local ok, result = pcall(C_ChatInfo.RegisterAddonMessagePrefix, Comm.PREFIX)
 	local registered = Enum.RegisterAddonMessagePrefixResult
+	FK.Diag("prefixRegistered", ok and enumName(registered, result) or ("threw: " .. tostring(result)))
 	if not ok or (result ~= registered.Success and result ~= registered.DuplicatePrefix) then
 		FK.Debug("could not register the %s prefix, result %s; local-only mode", Comm.PREFIX, tostring(result))
 		FK.Capabilities.results.addonComm = false
