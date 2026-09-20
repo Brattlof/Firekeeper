@@ -8,7 +8,7 @@ local function usage()
 	FK.Print("commands:")
 	for _, line in ipairs({
 		"|cffffff00/fk|r — open the camp panel",
-		"|cffffff00/fk new [slots|campfire]|r — start a fresh camp (default 3 slots)",
+		"|cffffff00/fk new [slots|campfire]|r — record a fresh camp without lighting one",
 		"|cffffff00/fk place <object>|r — record what you put on the fire",
 		"|cffffff00/fk plan|r — print the suggested placements",
 		"|cffffff00/fk announce|r — post the camp to party or say",
@@ -81,7 +81,8 @@ function handlers.new(rest)
 	end
 
 	FK.Camp:Reset(slots)
-	FK.Print("new camp with %d slots.", FK.Camp.slots)
+	FK.Print("recorded a camp with %d slots. Lighting one is the fire button on the panel.",
+		FK.Camp.slots)
 end
 
 function handlers.place(rest)

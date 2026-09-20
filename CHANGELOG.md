@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **The campfire buttons now light a campfire.** They used to call the addon's own "start a
+  new camp", which cleared its record and touched nothing in the game — so the panel
+  claimed a camp existed when there was no fire. They are secure buttons pointed at the
+  Cooking campfire kit now, exactly like the object buttons, and the camp starts itself
+  when the client reports the cast. The flame on the title bar lights the biggest kit you
+  are carrying. A kit you do not have greys out rather than doing nothing.
+- `/fk new` says what it really is: it records a camp, it does not light one.
+
 - **The Place tab now knows what is in your bags.** Having the skill to make a Sharpening
   Wheel is not the same as carrying one, and only one of those puts an object on a fire.
   Objects you have none of are greyed out and say so, and the ones you do have show how

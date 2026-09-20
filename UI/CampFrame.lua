@@ -312,17 +312,45 @@ local function buildPlaceTab(parent)
 	footer:SetJustifyH("LEFT")
 	tab.footer = footer
 
-	-- Starting a fresh fire belongs here: it is the other half of placing.
+	-- Lighting the fire belongs here, and it has to actually light it. These are
+	-- the Cooking campfire kits: real items with real placement spells, so the
+	-- button uses the kit exactly as the object buttons use an object, and
+	-- `Core/Placement.lua` starts the camp when it sees the cast finish.
+	tab.campfireButtons = {}
 	local x = 0
 	for _, campfire in ipairs(FK.Data.campfires) do
 		local slots = campfire.effect.slots
-		local button = FK.Theme.Button(tab, ("New %d-slot"):format(slots), 92, function()
-			FK.Camp:Reset(slots)
-			FK.Print("new camp with %d slots.", FK.Camp.slots)
-			FK.UI:Refresh()
-		end)
+		local secureFire, button = pcall(CreateFrame, "Button", nil, tab, "SecureActionButtonTemplate")
+		if secureFire and button then
+			button.secure = true
+			-- The combat guard in Refresh keys off this. These are protected
+			-- frames even for a player with no placeable objects at all, which
+			-- is the case that used to walk straight past the guard.
+			tab.secureButtons = true
+			button:RegisterForClicks("AnyUp", "LeftButtonDown", "RightButtonDown")
+			FK.Theme.Dress(button, ("Light %d-slot"):format(slots), 92)
+			button:SetScript("PostClick", function()
+				if FK.UI and FK.UI.Refresh then
+					FK.UI:Refresh()
+				end
+			end)
+		else
+			-- No secure template: the button can only write down that you lit
+			-- one, which is the old behaviour and is labelled as such.
+			button = FK.Theme.Button(tab, ("Note %d-slot"):format(slots), 92, function()
+				if FK.Professions.CountOf(campfire) == 0 then
+					FK.Print("you are not carrying a %d-slot campfire kit.", slots)
+					return
+				end
+				FK.Camp:Reset(slots)
+				FK.Print("noted a %d-slot camp. Light the kit from your bags.", slots)
+				FK.UI:Refresh()
+			end)
+		end
+		button.campfire = campfire
 		button:SetPoint("BOTTOMLEFT", x, 0)
 		x = x + 96
+		table.insert(tab.campfireButtons, button)
 	end
 
 	function tab:Refresh(plan)
@@ -438,6 +466,19 @@ local function buildPlaceTab(parent)
 				button:Show()
 			elseif self.buttons[index] then
 				self.buttons[index]:Hide()
+			end
+		end
+
+		for _, button in ipairs(self.campfireButtons or {}) do
+			local count = FK.Professions.CountOf(button.campfire)
+			local have = count == nil or count > 0
+			FK.Theme.SetTextColor(button.text,
+				have and FK.Theme.colors.text or FK.Theme.colors.smoke)
+
+			if button.secure then
+				local itemId = FK.Data.ItemIdFor(button.campfire, self.faction)
+				button:SetAttribute("type", have and itemId and "item" or nil)
+				button:SetAttribute("item", have and itemId and ("item:" .. itemId) or nil)
 			end
 		end
 
@@ -852,14 +893,31 @@ local function createFrame()
 			function() FK.Camp:Announce() end },
 		{ "Interface\\Icons\\INV_Misc_Map_01", "Find camps", "Ask who is hosting a fire nearby",
 			function() FK.Discovery:Seek() FK.UI:Refresh() end },
-		{ "Interface\\Icons\\Spell_Fire_Fire", "New camp", "Start a fresh three-slot camp",
-			function() FK.Camp:Reset() FK.UI:Refresh() end },
+		{ "Interface\\Icons\\Spell_Fire_Fire", "Light a campfire",
+			"Uses a campfire kit from your bags. The camp starts itself once it is lit.",
+			function()
+				-- Secure: the click already used the kit, and Placement starts
+				-- the camp when the cast lands. Insecure: this client has no
+				-- secure template, so writing it down is all the button can do,
+				-- the same fallback the Place tab's kit buttons use.
+				if not (frame.lightButton and frame.lightButton.secure) then
+					FK.Camp:Reset()
+					FK.Print("noted a %d-slot camp. Light a kit from your bags.", FK.Camp.slots)
+				end
+				if FK.UI and FK.UI.Refresh then
+					FK.UI:Refresh()
+				end
+			end, true },
 	}
 	local x = -8
 	for _, action in ipairs(actions) do
-		local button = Theme.IconButton(frame.titleBar, action[1], action[2], action[3], action[4])
+		local button = Theme.IconButton(frame.titleBar, action[1], action[2], action[3],
+			action[4], action[5])
 		button:SetPoint("RIGHT", frame.closeButton, "LEFT", x, 0)
 		x = x - 24
+		if action[5] then
+			frame.lightButton = button
+		end
 	end
 
 	local rule = Theme.Line(frame, Theme.colors.emberDim, 0.5)
@@ -906,6 +964,31 @@ function UI:Refresh()
 	local plan = FK.Camp:Plan()
 	frame.header:SetText(("%d of %d slots used"):format(plan.used, plan.capacity))
 	updatePips(frame, plan.used, plan.capacity)
+
+	-- The title-bar fire uses the largest campfire kit you are actually carrying,
+	-- so one click lights the best fire you can. Carrying none arms nothing.
+	if frame.lightButton and frame.lightButton.secure
+		and not (InCombatLockdown and InCombatLockdown()) then
+		local faction = UnitFactionGroup and UnitFactionGroup("player") or nil
+		-- The largest kit you are known to carry. `CountOf` is nil when the
+		-- client will not read bags (FK-24), and one button has to choose one
+		-- kit, so an unknown count falls back to the smallest campfire rather
+		-- than the tier-3 blueprint at the end of the list.
+		local best, unknown
+		for _, campfire in ipairs(FK.Data.campfires) do
+			local count = FK.Professions.CountOf(campfire)
+			if count and count > 0 then
+				best = campfire
+			elseif count == nil then
+				unknown = unknown or campfire
+			end
+		end
+		best = best or unknown
+		local itemId = best and FK.Data.ItemIdFor(best, faction)
+		frame.lightButton:SetAttribute("type", itemId and "item" or nil)
+		frame.lightButton:SetAttribute("item", itemId and ("item:" .. itemId) or nil)
+		frame.lightButton.icon:SetDesaturated(not itemId)
+	end
 
 	local tabName = frame.strip.selected
 	local current = frame.tabFrames[tabName]

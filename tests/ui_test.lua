@@ -308,6 +308,95 @@ function tests.a_nameless_player_cannot_place()
 	t.isTrue(err and err:find("who you are"), "rather than becoming a nil table index")
 end
 
+function tests.the_campfire_buttons_light_a_real_fire()
+	-- They used to call Camp:Reset, which clears the addon's own record and
+	-- touches nothing in the game. A campfire kit is a real item with a real
+	-- placement spell, so the button has to use it.
+	local FK, panel = build({ count = 0, bags = { [279981] = 1, [279961] = 2 } })
+	FK.Camp.placed = {}
+	panel.strip:Select("Place")
+	FK.UI:Refresh()
+
+	local buttons = panel.tabFrames.Place.campfireButtons
+	t.count(buttons, 3, "one button per campfire kit")
+
+	local byName = {}
+	for _, button in ipairs(buttons) do
+		byName[button.campfire.id] = button
+	end
+
+	t.isTrue(byName.basic_campfire_kit.secure, "the basic kit's button is a secure one")
+	t.equals(byName.basic_campfire_kit.__attributes.item, "item:279981",
+		"pointed at the kit you are carrying")
+	t.equals(byName.journeyman_campfire_kit.__attributes.item, "item:279961",
+		"and the journeyman one at its own")
+
+	-- You have no expert kit, so that button must not be armed.
+	t.equals(byName.expert_campfire_kit.__attributes.item, nil,
+		"a kit you do not have arms nothing")
+end
+
+function tests.the_title_bar_fire_uses_the_best_kit_you_carry()
+	local FK, panel = build({ count = 0, bags = { [279981] = 1, [279974] = 1 } })
+	FK.Camp.placed = {}
+	FK.UI:Refresh()
+
+	t.isTrue(panel.lightButton, "the title bar has a light button")
+	t.isTrue(panel.lightButton.secure, "and it is a secure one")
+	-- Basic and Expert in the bags: the Expert is the better fire.
+	t.equals(panel.lightButton.__attributes.item, "item:279974",
+		"it lights the biggest fire you can")
+end
+
+function tests.carrying_no_kit_arms_no_fire()
+	local FK, panel = build({ count = 0, bags = {} })
+	FK.Camp.placed = {}
+	FK.UI:Refresh()
+	t.equals(panel.lightButton.__attributes.item, nil, "nothing to light, nothing armed")
+end
+
+function tests.combat_stops_the_place_tab_touching_protected_frames()
+	-- The campfire buttons are protected frames even for a player with nothing
+	-- to place, and the guard used to key off a flag only the object buttons
+	-- set. So a character with no professions re-armed three secure buttons
+	-- every five seconds in combat, which the client refuses.
+	local FK, panel, state = build({ count = 0 })
+	FK.Professions.PlaceableObjects = function() return {} end
+	panel.strip:Select("Place")
+	FK.UI:Refresh()
+
+	local tab = panel.tabFrames.Place
+	tab.footer:SetText("")
+	state.world.inCombat = true
+	FK.UI:Refresh()
+
+	t.isTrue(tab.footer:GetText():find("out of combat"),
+		"the tab stands back in combat, got: " .. tostring(tab.footer:GetText()))
+end
+
+function tests.without_secure_templates_the_title_bar_fire_still_records()
+	-- Pointing the flame at an item left the no-template client with a button
+	-- that did nothing at all: no fire, no record, no message.
+	local FK, panel = build({ count = 0, noTemplates = true })
+	t.equals(panel.lightButton.secure, nil, "the flame is not a secure button here")
+
+	FK.Camp.slots = 5
+	panel.lightButton.__scripts.OnClick()
+	t.equals(FK.Camp.slots, 3, "clicking it falls back to recording a fresh camp")
+end
+
+function tests.unreadable_bags_light_the_smallest_fire_not_the_rarest()
+	-- CountOf is nil when the client will not read bags (FK-24). One button has
+	-- to choose one kit, and guessing the tier-3 blueprint arms a fire almost
+	-- nobody can light.
+	local FK, panel = build({ count = 0, noBagCounts = true })
+	FK.Camp.placed = {}
+	FK.UI:Refresh()
+
+	t.equals(panel.lightButton.__attributes.item, "item:279981",
+		"an unknown count falls back to the basic kit")
+end
+
 function tests.a_camp_can_be_waypointed_by_clicking_it()
 	local FK, panel = build()
 	local asked = false
