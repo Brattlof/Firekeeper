@@ -38,6 +38,11 @@ fetching it and confirming the name came back as expected. So the ids are verifi
 assumed, and anyone can re-check a row with one URL. That is also the right first step for
 a new object: read the tooltip before asking someone to look in game.
 
+`spellId` comes from the same place: each item's tooltip links the spell its use effect
+casts, and that is the spell the client announces when a placement finishes, which is how
+the addon notices what you put down. The Faction Banner is two items with two spells, one
+per faction, so it carries both under `byFaction`.
+
 ## What is known, and what is not
 
 All 38 objects have a sourced effect. The buffs, with their exclusivities:

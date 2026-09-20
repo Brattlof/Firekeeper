@@ -64,6 +64,18 @@ local probes = {
 	-- Camp object icons on the Place tab. Present on 1.60.1.69913; without it
 	-- every object falls back to the addon's own flame, which is a worse panel
 	-- rather than a broken one.
+	-- Clicking an object on the Place tab uses the item, which only a secure
+	-- action button can do. The template is defined in this build's XML, but
+	-- that is not proof an addon can instantiate one, so this actually makes
+	-- one. See docs/RESEARCH.md, FK-23.
+	secureButtons = function()
+		local ok, button = pcall(CreateFrame, "Button", nil, UIParent, "SecureActionButtonTemplate")
+		if not ok or not button then
+			return false
+		end
+		button:Hide()
+		return type(button.SetAttribute) == "function"
+	end,
 	itemIcons = function()
 		return C_Item ~= nil and type(C_Item.GetItemIconByID) == "function"
 	end,

@@ -121,7 +121,7 @@ local function buildCampTab(parent)
 	local secure, place = pcall(CreateFrame, "Button", nil, tab, "SecureActionButtonTemplate")
 	if secure and place then
 		place.secure = true
-		place:RegisterForClicks("AnyUp")
+		place:RegisterForClicks("AnyUp", "LeftButtonDown", "RightButtonDown")
 		FK.Theme.Dress(place, "Place what is suggested", 160)
 		place:SetScript("PostClick", function()
 			if FK.UI and FK.UI.Refresh then
@@ -195,9 +195,10 @@ local function buildCampTab(parent)
 
 		if place.secure and not (InCombatLockdown and InCombatLockdown()) then
 			local object = mine and FK.Data.GetObject(mine.objectId)
-			place:SetAttribute("type", object and "item" or nil)
-			place:SetAttribute("item", object and object.itemId
-				and ("item:" .. object.itemId) or nil)
+			local itemId = object and FK.Data.ItemIdFor(object,
+				UnitFactionGroup and UnitFactionGroup("player") or nil)
+			place:SetAttribute("type", itemId and "item" or nil)
+			place:SetAttribute("item", itemId and ("item:" .. itemId) or nil)
 		end
 
 		list:Set(lines)
@@ -229,11 +230,12 @@ local function objectButton(tab, grid, index)
 	local secure, button = pcall(CreateFrame, "Button", nil, grid, "SecureActionButtonTemplate")
 	if secure and button then
 		button.secure = true
-		button:RegisterForClicks("AnyUp")
+		button:RegisterForClicks("AnyUp", "LeftButtonDown", "RightButtonDown")
 	else
 		button = CreateFrame("Button", nil, grid)
 	end
 	tab.secureButtons = button.secure
+	FK.Diag("secureButtons", button.secure and "yes" or "no")
 	button:SetSize(ICON_SIZE, ICON_SIZE)
 	button:SetPoint("TOPLEFT", column * (ICON_SIZE + 8), -row * (ICON_SIZE + 8))
 
@@ -297,6 +299,7 @@ local function buildPlaceTab(parent)
 	heading:SetPoint("TOPLEFT", 0, 0)
 	tab.heading = heading
 	tab.secureButtons = false
+	tab.faction = UnitFactionGroup and UnitFactionGroup("player") or nil
 
 	local grid = CreateFrame("Frame", nil, tab)
 	grid:SetPoint("TOPLEFT", 0, -20)
@@ -323,6 +326,15 @@ local function buildPlaceTab(parent)
 	end
 
 	function tab:Refresh(plan)
+		-- Secure buttons are protected frames, so creating, showing, hiding and
+		-- pointing them at an item are all refused while the client is locked
+		-- down. Doing none of it is the only safe answer; `UI:OnLogin` asks for
+		-- a refresh the moment combat ends.
+		if self.secureButtons and InCombatLockdown and InCombatLockdown() then
+			footer:SetText(colored("8a8a8a", "Placing is put away until you are out of combat."))
+			return
+		end
+
 		local objects = FK.Professions:PlaceableObjects()
 		local selfKey = FK.Roster.SelfKey()
 
@@ -407,10 +419,11 @@ local function buildPlaceTab(parent)
 				-- Point the secure button at the item, or at nothing when it
 				-- would be refused. Attributes cannot be changed in combat, and
 				-- nobody is building a camp mid-pull.
-				if button.secure and not (InCombatLockdown and InCombatLockdown()) then
+				if button.secure then
+					local itemId = FK.Data.ItemIdFor(object, self.faction)
 					button:SetAttribute("type", button.placeable and "item" or nil)
 					button:SetAttribute("item",
-						button.placeable and object.itemId and ("item:" .. object.itemId) or nil)
+						button.placeable and itemId and ("item:" .. itemId) or nil)
 				end
 
 				button:Show()
@@ -427,9 +440,16 @@ local function buildPlaceTab(parent)
 		elseif readyIn > 0 then
 			footer:SetText(colored("8a8a8a",
 				"Camp cooldown: " .. FK.Cooldowns.Format(readyIn)))
-		elseif self.secureButtons then
+		elseif self.secureButtons and FK.Placement and FK.Placement.watching then
 			footer:SetText(colored("8a8a8a",
 				"Click one to place it. Green is the best choice here, red would be wasted."))
+		elseif self.secureButtons then
+			-- The button will use the item, but nothing is watching for the
+			-- cast, so the camp would not know. Say so rather than imply it is
+			-- handled.
+			footer:SetText(colored("8a8a8a",
+				"Click one to place it, then tell the camp with /fk place — this client "
+					.. "will not say what you cast."))
 		else
 			footer:SetText(colored("8a8a8a",
 				"Use the item from your bags; clicking here only records it. "
@@ -928,4 +948,15 @@ function UI:OnLogin()
 			UI:Refresh()
 		end)
 	end
+
+	-- The Place tab does nothing while the client is locked down, so it has to
+	-- be told when that ends or it would sit stale until the next tick.
+	pcall(function()
+		FK.eventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+	end)
+	FK.eventFrame:HookScript("OnEvent", function(_, event)
+		if event == "PLAYER_REGEN_ENABLED" then
+			UI:Refresh()
+		end
+	end)
 end

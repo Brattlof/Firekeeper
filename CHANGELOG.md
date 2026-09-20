@@ -10,9 +10,14 @@
 - **The addon notices what you placed instead of being told.** Every camp object casts a
   spell to put itself down, and the client announces a finished cast, so `/fk place` and
   the "I placed this" step are no longer needed for the record to be right.
-- **A camp starts itself.** Lighting a campfire kit begins a fresh camp at that capacity,
-  and placing something more than an hour after the last placement is taken as a new fire,
-  since camp buffs last an hour. You should not have to press "new camp".
+- **A camp starts itself.** Lighting a campfire kit begins a fresh camp at that capacity
+  and tells the group, and placing something more than an hour after anything last went on
+  the fire is taken as a new one, since camp buffs last an hour. You should not have to
+  press "new camp".
+- The Place tab puts itself away while you are in combat rather than trying to rearrange
+  protected buttons, and comes back the moment combat ends.
+- Horde players get the Horde Faction Banner, which is a different item with a different
+  spell from the Alliance one.
 
 ## 0.2.1 — 20 September 2026
 

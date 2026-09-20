@@ -39,27 +39,43 @@ function Placement.OnCastSucceeded(spellId, now)
 	end
 
 	local camp = FK.Camp
-	local fresh = object.effect and object.effect.kind == "slots"
+	local isCampfire = object.effect and object.effect.kind == "slots"
+	local fresh = isCampfire
 
-	-- A campfire is a new fire. So is placing something when the last camp is
-	-- older than the buffs it would have given.
-	if not fresh and camp.startedAt and (now - camp.startedAt) > Placement.CAMP_LIFETIME then
+	-- A campfire is a new fire. So is placing something more than an hour after
+	-- anything last went on this one, since that is how long camp buffs last.
+	-- Measured from the last placement, not from when the camp was reset, or a
+	-- long session would make every fire look stale.
+	local touched = camp.lastPlacedAt
+	if not fresh and touched and (now - touched) > Placement.CAMP_LIFETIME then
 		fresh = true
 	end
 
 	if fresh then
-		camp:Reset(object.effect and object.effect.slots or nil)
+		camp:Reset(isCampfire and object.effect.slots or nil)
 	end
 
-	if object.effect and object.effect.kind == "slots" then
+	if isCampfire then
 		-- The fire itself is not one of the things standing on it (FK-2), so
-		-- there is nothing further to record.
+		-- there is nothing further to record — but the group still has to be
+		-- told, or their view keeps the old fire's objects and hands them back.
+		if FK.Comm and FK.Comm.AnnounceCamp then
+			FK.Comm:AnnounceCamp(camp)
+		end
 		return object, "campfire"
 	end
 
 	local ok = camp:MarkPlaced(FK.Roster.SelfKey(), object.id)
+	if ok then
+		-- Stamped from the caller's clock rather than the one MarkPlaced
+		-- reaches for, so "an hour since the last placement" means the same
+		-- thing here as it does to whoever asked.
+		camp.lastPlacedAt = now
+	end
 	return object, ok and "placed" or "refused"
 end
+
+Placement.watching = false
 
 function Placement:OnLogin()
 	local event = "UNIT_SPELLCAST_SUCCEEDED"
@@ -71,20 +87,39 @@ function Placement:OnLogin()
 		return
 	end
 
-	local ok = pcall(function()
-		FK.eventFrame:RegisterEvent(event)
+	-- Prefer the unit-filtered registration: the client then only sends us the
+	-- player's own casts, so there is no unit token to compare at all. Every
+	-- payload field but `castBarID` is in scope for the spellcast restriction,
+	-- and a secret cannot be compared.
+	local filtered = pcall(function()
+		FK.eventFrame:RegisterUnitEvent(event, "player")
 	end)
-	if not ok then
-		FK.Debug("could not watch %s; placements must be recorded by hand", event)
-		FK.Diag("placementWatch", "register failed")
-		return
+	if not filtered then
+		local ok = pcall(function()
+			FK.eventFrame:RegisterEvent(event)
+		end)
+		if not ok then
+			FK.Debug("could not watch %s; placements must be recorded by hand", event)
+			FK.Diag("placementWatch", "register failed")
+			return
+		end
 	end
 
-	FK.Diag("placementWatch", "watching")
+	Placement.watching = true
+	FK.Diag("placementWatch", filtered and "watching (player only)" or "watching (all units)")
 
 	FK.eventFrame:HookScript("OnEvent", function(_, firedEvent, unit, _, spellId)
-		if firedEvent ~= event or unit ~= "player" then
+		if firedEvent ~= event then
 			return
+		end
+		-- Only reached when the unit-filtered registration was unavailable.
+		if not filtered then
+			if FK.IsSecret and FK.IsSecret(unit) then
+				return
+			end
+			if unit ~= "player" then
+				return
+			end
 		end
 
 		local object, what = Placement.OnCastSucceeded(spellId, time and time() or 0)

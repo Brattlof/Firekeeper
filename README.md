@@ -70,7 +70,7 @@ there — the slash commands are a shortcut, not the only way in. Five tabs:
 | Tab | What is on it |
 | --- | --- |
 | **Camp** | What is on the fire, who should place what, what would be wasted, who is on cooldown. Announce to chat. |
-| **Place** | Every object *you* can place, as icons. Green is the best choice here, red would be wasted, greyed out means you cannot. **Click one and it actually places it** — the button uses the item, so you never leave the panel. |
+| **Place** | Every object *you* can place, as icons. Green is the best choice here, red would be wasted, greyed out means you cannot. **Click one and it places it** — the button uses the item, so you never leave the panel. Start a new three, five or ten slot camp here too. On a client that will not allow it, the button records the placement instead and says so. |
 | **Buffs** | Every camp buff and what would cover it: missing, available from somebody standing here, already on the fire, or already covered by a class buff. Below it, the class buffs your group is missing. |
 | **Find** | Camps other people are hosting, and how far — click one to put a waypoint on it. Host your own. Guildies nearby, with distance and direction, and the switch for sharing your position. |
 | **You** | Your professions and how far the next object is, and a box to set one by hand when the game will not say. Legacy ranks. Camp cooldowns across your characters. The minimap button. What this client will and will not let the addon do. |
