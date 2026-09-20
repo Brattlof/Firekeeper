@@ -29,6 +29,8 @@ Core/Roster.lua
 Core/Auras.lua
 Core/Comm.lua
 Core/Camp.lua
+Core/CampList.lua
+Core/Discovery.lua
 Core/Commands.lua
 
 UI/CampFrame.lua
