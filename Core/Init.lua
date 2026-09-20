@@ -25,6 +25,8 @@ local defaults = {
 	-- writes saved variables but never reads them back (docs/RESEARCH.md, FK-9),
 	-- so a one-way record is exactly what a research question needs.
 	diagnostics = {},
+	-- Climbs once per session if the client ever reads this file back.
+	sessions = 0,
 	-- Legacy perks change camp maths but cannot be read from the API yet, so
 	-- the player tells us their ranks. See docs/RESEARCH.md, question FK-3.
 	legacy = {
@@ -98,11 +100,23 @@ frame:RegisterEvent("ADDON_LOADED")
 frame:RegisterEvent("PLAYER_LOGIN")
 frame:SetScript("OnEvent", function(_, event, loadedAddon)
 	if event == "ADDON_LOADED" and loadedAddon == addonName then
+		-- Did the client hand us back what it saved last time? A counter is the
+		-- honest test: if saved variables load, it climbs every session, and on
+		-- a build that only writes them it is 1 for ever (docs/RESEARCH.md,
+		-- FK-9). It also fixes itself: the day the client starts loading them,
+		-- the number moves and the warning stops.
+		local previousSessions = FirekeeperDB and FirekeeperDB.sessions
+
 		FirekeeperDB = FirekeeperDB or {}
 		FirekeeperCharDB = FirekeeperCharDB or {}
 		applyDefaults(FirekeeperDB, defaults)
 		FK.db = FirekeeperDB
 		FK.charDb = FirekeeperCharDB
+
+		FK.savedVariablesLoaded = previousSessions ~= nil
+		FK.db.sessions = (previousSessions or 0) + 1
+		FK.Diag("sessions", FK.db.sessions)
+
 		forEachModule("OnLoad")
 	elseif event == "PLAYER_LOGIN" then
 		forEachModule("OnLogin")

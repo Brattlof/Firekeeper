@@ -113,6 +113,31 @@ function Capabilities:OnLogin()
 	-- For the one question where that difference matters, write down the raw
 	-- answer as well. See docs/RESEARCH.md, FK-4.
 	FK.Diag("outgoingRestricted", Capabilities.OutgoingRestrictionDetail())
+
+	local limitations = Capabilities.Limitations()
+	if #limitations > 0 then
+		FK.Print("what this client will not let me do:")
+		for _, line in ipairs(limitations) do
+			FK.Print("|cff888888  %s|r", line)
+		end
+	end
+end
+
+--- What this client and realm will not let the addon do, in plain words.
+--
+-- Every line is driven by something actually observed this session rather than
+-- by a build number, so a realm that allows more says less here, and the list
+-- empties itself as Forever settles down. The addon's whole pitch is saying
+-- what it does not know; this is the same idea pointed at the client.
+function Capabilities.Limitations()
+	local lines = {}
+
+	if not FK.savedVariablesLoaded then
+		table.insert(lines, "no saved settings came back from the client, so professions set with")
+		table.insert(lines, "|cffffff00/fk prof|r, Legacy ranks and alt cooldowns start fresh this session.")
+	end
+
+	return lines
 end
 
 --- Exactly what the client says about sending addon messages, in words.
@@ -150,6 +175,9 @@ function Capabilities.Report()
 	local lines = { ("Firekeeper %s on client %s (interface %s)"):format(FK.version, build, interface) }
 	for _, name in ipairs(names) do
 		table.insert(lines, ("  %s: %s"):format(name, Capabilities.Has(name) and "|cff40ff40yes|r" or "|cffff4040no|r"))
+	end
+	for _, limitation in ipairs(Capabilities.Limitations()) do
+		table.insert(lines, ("|cff888888%s|r"):format(limitation))
 	end
 	table.insert(lines, "|cff888888all of this is saved to disk on /reload, so you can attach the file|r")
 	return lines
