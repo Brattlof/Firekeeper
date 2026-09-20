@@ -111,6 +111,9 @@ function handlers.cd()
 	end
 	if not any then
 		FK.Print("no camp objects placed yet on any character.")
+		if not FK.savedVariablesLoaded then
+			FK.Print("|cff888888this list is per session: the client did not give back what was saved.|r")
+		end
 	end
 end
 
