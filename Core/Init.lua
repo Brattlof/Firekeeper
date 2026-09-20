@@ -27,6 +27,13 @@ local defaults = {
 		fieldGuide = 0, -- shortens the shared object cooldown
 		permanence = 0, -- lengthens camp buffs
 	},
+	-- Where the minimap button sits, and whether it is there at all.
+	minimap = {
+		angle = 200, -- degrees around the minimap, lower left by default
+		hide = false,
+	},
+	-- Where the player dragged the camp panel to.
+	panelPosition = {},
 	-- Off by default: a position is the one genuinely personal thing this
 	-- addon can broadcast, so `/fk guild share` has to ask for it.
 	shareWithGuild = false,

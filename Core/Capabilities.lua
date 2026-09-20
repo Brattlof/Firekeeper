@@ -55,6 +55,11 @@ local probes = {
 		return type(_G.JoinPermanentChannel) == "function"
 			and type(_G.GetChannelName) == "function"
 	end,
+	-- The button hangs off the client's own Minimap frame. Present on
+	-- 1.60.1.69913; probed because a frame is not an API contract.
+	minimapFrame = function()
+		return _G.Minimap ~= nil and type(_G.Minimap.GetCenter) == "function"
+	end,
 	userWaypoint = function()
 		return C_Map ~= nil and type(C_Map.SetUserWaypoint) == "function"
 	end,

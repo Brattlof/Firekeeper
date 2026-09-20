@@ -35,4 +35,6 @@ Core/Nearby.lua
 Core/Discovery.lua
 Core/Commands.lua
 
+UI/Theme.lua
 UI/CampFrame.lua
+UI/MinimapButton.lua

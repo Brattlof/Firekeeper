@@ -22,6 +22,7 @@ local function usage()
 		"|cffffff00/fk legacy <fieldGuide|permanence> <rank>|r — record Legacy ranks",
 		"|cffffff00/fk caps|r — what this client lets the addon do",
 		"|cffffff00/fk gaps|r — camp objects still missing from the data",
+		"|cffffff00/fk minimap|r — show or hide the minimap button",
 		"|cffffff00/fk debug|r — toggle debug output",
 	}) do
 		FK.Print(line)
@@ -267,6 +268,15 @@ function handlers.train()
 	end
 end
 
+function handlers.minimap()
+	local shown = FK.db.minimap.hide -- hidden now means show it
+	if not FK.MinimapButton:SetShown(shown) then
+		FK.Print("|cffff4040this client has no minimap frame to put a button on|r")
+		return
+	end
+	FK.Print("minimap button %s.", shown and "shown" or "hidden")
+end
+
 function handlers.caps()
 	for _, line in ipairs(FK.Capabilities.Report()) do
 		FK.Print(line)
@@ -306,6 +316,17 @@ end
 function handlers.debug()
 	FK.db.debug = not FK.db.debug
 	FK.Print("debug %s.", FK.db.debug and "on" or "off")
+end
+
+--- Runs a slash command by name, for the minimap button and anything else
+-- that wants the same behaviour as typing it.
+function Commands.Run(command, rest)
+	local handler = handlers[command]
+	if not handler then
+		return false
+	end
+	handler(rest or "")
+	return true
 end
 
 function Commands:OnLoad()
