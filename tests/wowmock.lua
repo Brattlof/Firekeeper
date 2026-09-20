@@ -102,7 +102,16 @@ function Mock.install(world)
 
 	local counters = { frames = 0, textures = 0, fontStrings = 0, templates = 0,
 		templateNames = {} }
-	local secret = setmetatable({}, { __tostring = function() return "<secret>" end })
+	-- A stand-in for a value the client will not let an addon look at. It
+	-- throws on the operations the real thing throws on, so a test that removes
+	-- a guard fails instead of quietly passing.
+	local function refuse() error("attempt to use a secret value", 2) end
+	local secret = setmetatable({}, {
+		__tostring = function() return "<secret>" end,
+		__eq = refuse, __lt = refuse, __le = refuse,
+		__index = refuse, __newindex = refuse, __concat = refuse,
+		__add = refuse, __len = refuse, __call = refuse,
+	})
 
 	_G.issecretvalue = function(value) return value == secret end
 	_G.UIParent = Mock.widget("Frame", "UIParent", counters)
@@ -139,7 +148,8 @@ function Mock.install(world)
 	_G.UnitPlayerControlled = function() return false end
 	_G.UnitIsPlayer = function() return false end
 	_G.Ambiguate = function(name) return name end
-	_G.InCombatLockdown = function() return false end
+	_G.InCombatLockdown = function() return world.inCombat == true end
+	_G.UnitFactionGroup = function() return world.faction or "Alliance" end
 
 	_G.UnitExists = function(unit)
 		if unit == "player" then return true end

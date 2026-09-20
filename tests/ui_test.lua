@@ -111,10 +111,13 @@ function tests.the_panel_draws_at_all()
 	-- panel appears. The single template it does use is SecureActionButton,
 	-- which is there for behaviour rather than appearance — using an item is
 	-- protected — and the panel builds without it, as the fallback test shows.
+	local names = {}
 	for name in pairs(state.counters.templateNames) do
-		t.equals(name, "SecureActionButtonTemplate",
-			"the only template used is the secure one, not " .. name)
+		table.insert(names, name)
 	end
+	table.sort(names)
+	t.equals(table.concat(names, ","), "SecureActionButtonTemplate",
+		"exactly one template is used, the secure one: got " .. table.concat(names, ","))
 end
 
 function tests.every_tab_draws_twice_without_complaint()

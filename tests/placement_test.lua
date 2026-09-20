@@ -72,16 +72,26 @@ function tests.placing_after_an_hour_is_taken_as_a_different_fire()
 	-- Camp buffs last an hour, so a placement an hour later is somewhere else.
 	local FK = build()
 	FK.Placement.OnCastSucceeded(spellFor(FK, "incense_candle"), 1000)
-	FK.Camp.startedAt = 1000
+	t.equals(FK.Camp.lastPlacedAt, 1000, "the placement was stamped with the caller's clock")
 
 	FK.Placement.OnCastSucceeded(spellFor(FK, "lodestone"), 1000 + FK.Placement.CAMP_LIFETIME + 1)
 	t.count(FK.Camp.placed, 1, "the old fire's objects are gone")
 	t.equals(FK.Camp.placed[1].objectId, "lodestone", "and only the new one is recorded")
 end
 
+function tests.a_long_session_does_not_make_the_fire_look_stale()
+	-- The rule used to measure from the last camp reset, which only moves at
+	-- login — so playing for an hour made the next placement wipe a fire you
+	-- were standing at.
+	local FK = build()
+	FK.Camp.startedAt = 0
+	FK.Camp.lastPlacedAt = nil
+	FK.Placement.OnCastSucceeded(spellFor(FK, "incense_candle"), 99999)
+	t.count(FK.Camp.placed, 1, "a first placement long after login is not a new fire")
+end
+
 function tests.placing_again_at_the_same_fire_does_not_reset_it()
 	local FK = build()
-	FK.Camp.startedAt = 1000
 	FK.Placement.OnCastSucceeded(spellFor(FK, "incense_candle"), 1010)
 	local _, what = FK.Placement.OnCastSucceeded(spellFor(FK, "lodestone"), 1020)
 
@@ -91,15 +101,54 @@ function tests.placing_again_at_the_same_fire_does_not_reset_it()
 	t.count(FK.Camp.placed, 1, "and the first is still there")
 end
 
-function tests.a_secret_spell_id_is_not_compared()
-	local FK, state = build(), nil
-	Mock.install({ count = 0 })
-	-- Rebuild so the secret sentinel belongs to this installation.
-	state = Mock.install({ count = 0 })
+function tests.a_secret_spell_id_is_asked_about_before_it_is_used()
+	-- Lua cannot be made to object to a table used as a key, so a sentinel that
+	-- throws proves nothing here: without the guard the lookup simply misses and
+	-- returns nil. What can be checked is that the code *asks* — so this fails
+	-- if the FK.IsSecret call is ever removed, which is the thing that would
+	-- break the addon on a restricted client.
+	local FK = build()
+	local state = Mock.install({ count = 0 })
+
+	local asked = false
+	local realIsSecret = FK.IsSecret
+	FK.IsSecret = function(value)
+		if value == state.secret then
+			asked = true
+		end
+		return realIsSecret(value)
+	end
+
 	local ok, err = pcall(function()
 		return FK.Placement.OnCastSucceeded(state.secret, 1000)
 	end)
+	FK.IsSecret = realIsSecret
+
 	t.isTrue(ok, "a secret spell id did not throw: " .. tostring(err))
+	t.isTrue(asked, "the spell id was tested for secrecy before being used")
+	t.count(FK.Camp.placed, 0, "and nothing was recorded from it")
+end
+
+function tests.a_campfire_tells_the_group_about_the_new_fire()
+	-- Without this the group keeps the old fire's objects and hands them back
+	-- the next time anyone announces.
+	local FK = build()
+	local announced = false
+	FK.Comm.AnnounceCamp = function() announced = true end
+
+	FK.Placement.OnCastSucceeded(spellFor(FK, "journeyman_campfire_kit"), 1000)
+	t.isTrue(announced, "the new fire was announced")
+end
+
+function tests.a_horde_banner_is_recognised_too()
+	local FK = build()
+	local horde = FK.Data.GetObject("faction_banner").byFaction.Horde
+	t.equals(FK.Data.ObjectForSpell(horde.spellId).id, "faction_banner",
+		"the Horde banner's own spell is a Faction Banner")
+	t.equals(FK.Data.ItemIdFor(FK.Data.GetObject("faction_banner"), "Horde"), horde.itemId,
+		"and a Horde player is pointed at their own item")
+	t.equals(FK.Data.ItemIdFor(FK.Data.GetObject("lodestone"), "Horde"), 279960,
+		"anything without variants is the same for everyone")
 end
 
 return tests

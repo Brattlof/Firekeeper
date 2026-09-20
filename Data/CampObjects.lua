@@ -232,7 +232,14 @@ FK.Data.campObjects = {
 	-- Tailoring
 	{
 		id = "faction_banner", name = "Faction Banner", itemId = 279973, spellId = 1307239,
-		itemIdByFaction = { Alliance = 279973, Horde = 279972 },
+		-- Two separate items, one per faction, each with its own placement
+		-- spell. A Horde player owns neither the Alliance item nor its spell, so
+		-- both have to be looked up by faction or the button points at something
+		-- they cannot use and the placement is never noticed.
+		byFaction = {
+			Alliance = { itemId = 279973, spellId = 1307239 },
+			Horde = { itemId = 279972, spellId = 1307240 },
+		},
 		profession = "Tailoring", tier = 1, skill = 20, source = "trainer",
 		effect = { kind = "buff", buff = "spirit", amounts = { 14, 19, 27, 32 } },
 		note = "Two items, one per faction, and it only buffs your own faction.",
@@ -367,9 +374,28 @@ end
 
 FK.Data.campObjectsBySpell = bySpell
 
+-- Faction variants go in the same index, so a Horde banner placement is
+-- recognised as a Faction Banner too.
+for _, object in ipairs(FK.Data.campObjects) do
+	for _, variant in pairs(object.byFaction or {}) do
+		if variant.spellId then
+			bySpell[variant.spellId] = object
+		end
+	end
+end
+
 --- The camp object a finished cast just placed, or nil.
 function FK.Data.ObjectForSpell(spellId)
 	return bySpell[tonumber(spellId) or spellId]
+end
+
+--- The item this player would actually place, which differs by faction for the
+-- Faction Banner. `faction` is UnitFactionGroup's "Alliance" or "Horde".
+function FK.Data.ItemIdFor(object, faction)
+	if object and object.byFaction and faction and object.byFaction[faction] then
+		return object.byFaction[faction].itemId
+	end
+	return object and object.itemId or nil
 end
 
 function FK.Data.GetObject(id)

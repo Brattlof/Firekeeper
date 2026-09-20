@@ -11,11 +11,13 @@ FK.Camp = Camp
 Camp.slots = FK.Plan and FK.Plan.DEFAULT_SLOTS or 3
 Camp.placed = {}
 Camp.startedAt = nil
+Camp.lastPlacedAt = nil
 
 function Camp:Reset(slots)
 	self.slots = slots or FK.Plan.DEFAULT_SLOTS
 	self.placed = {}
 	self.startedAt = time and time() or 0
+	self.lastPlacedAt = nil
 	if FK.UI and FK.UI.Refresh then
 		FK.UI:Refresh()
 	end
@@ -48,6 +50,10 @@ function Camp:MarkPlaced(player, objectId, silent)
 	end
 
 	table.insert(self.placed, { player = player, objectId = objectId })
+	-- When anything last went on this fire, which is what decides whether a
+	-- later placement belongs to a different camp. `startedAt` only moves when
+	-- the camp is reset, so it measures time since login just as readily.
+	self.lastPlacedAt = time and time() or 0
 
 	if object.effect and object.effect.kind == "slots" then
 		self.slots = math.max(self.slots, object.effect.slots or self.slots)
@@ -77,6 +83,9 @@ function Camp:Adopt(slots, placedIds, sender)
 		if FK.Data.GetObject(objectId) then
 			table.insert(self.placed, { player = sender, objectId = objectId })
 		end
+	end
+	if #self.placed > 0 then
+		self.lastPlacedAt = time and time() or 0
 	end
 	if FK.UI and FK.UI.Refresh then
 		FK.UI:Refresh()

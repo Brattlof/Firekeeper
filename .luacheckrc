@@ -45,6 +45,7 @@ read_globals = {
 	"UIParent",
 	"UnitClass",
 	"UnitExists",
+	"UnitFactionGroup",
 	"UnitGUID",
 	"UnitIsPlayer",
 	"UnitLevel",
