@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.3.1 — 21 September 2026
+
+The half of 0.3.0 that was still only pretending.
 
 - **The campfire buttons now light a campfire.** They used to call the addon's own "start a
   new camp", which cleared its record and touched nothing in the game — so the panel
@@ -9,7 +11,6 @@
   when the client reports the cast. The flame on the title bar lights the biggest kit you
   are carrying. A kit you do not have greys out rather than doing nothing.
 - `/fk new` says what it really is: it records a camp, it does not light one.
-
 - **The Place tab now knows what is in your bags.** Having the skill to make a Sharpening
   Wheel is not the same as carrying one, and only one of those puts an object on a fire.
   Objects you have none of are greyed out and say so, and the ones you do have show how
@@ -17,6 +18,21 @@
   could theoretically produce, so the planner stops assigning you a slot you cannot fill.
   On a client that will not report bag contents it falls back to skill, because offering
   too much beats telling everyone you can place nothing.
+- Four defects found reviewing the above before it shipped: the Place tab could touch
+  protected buttons in combat when you had nothing to place, the title-bar flame did
+  nothing at all on a client without secure buttons, an unreadable bag count armed the
+  tier-3 kit almost nobody carries, and the fallback button greyed itself out and fired
+  anyway.
+
+**Known limits, unchanged**
+
+- Whether the client lets an addon's button use an item is still the least proven thing
+  here, and this release leans on it harder: lighting the fire now goes through it too.
+  `/fk caps` shows `secureButtons`, and where it fails every button records instead and
+  says so.
+- This beta build writes saved settings but never reads them back, so professions, Legacy
+  ranks and alt cooldowns start fresh each session.
+- Nothing in the group-sharing half has been confirmed to reach another player.
 
 ## 0.3.0 — 20 September 2026
 
