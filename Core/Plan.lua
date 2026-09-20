@@ -21,6 +21,16 @@ local EFFECT_WEIGHT = {
 --- A stable identity for what an object gives the camp. Two objects with the
 -- same effect key are interchangeable, and placing both wastes a slot.
 function Plan.EffectKey(object)
+	-- An object that carries a lower tier's benefits shares its effect. Every
+	-- tier-2 and tier-3 tooltip except Engineering's and Cooking's says it
+	-- "provides all of the benefits of" the tier-1 object, so an Anvil already
+	-- gives the Sharpening Wheel's Strength and placing both wastes a slot.
+	-- Keying on the buff it ends up providing is what catches that.
+	local carried = FK.Data and FK.Data.EffectiveBuff and FK.Data.EffectiveBuff(object)
+	if carried then
+		return "buff:" .. tostring(carried)
+	end
+
 	local effect = object.effect or { kind = "unknown" }
 	if effect.kind == "buff" then
 		return "buff:" .. tostring(effect.buff)
@@ -36,6 +46,22 @@ end
 
 local function objectFor(id)
 	return FK.Data and FK.Data.GetObject and FK.Data.GetObject(id) or nil
+end
+
+--- What placing this object is worth.
+--
+-- A superseding object gives its own effect *and* the buff of the tier it
+-- replaces, so it must not score below that buff — otherwise the planner would
+-- prefer a bare Sharpening Wheel over an Anvil that carries the same Strength
+-- and is a workspace as well.
+local function weightFor(object)
+	local effect = object.effect or { kind = "unknown" }
+	local weight = EFFECT_WEIGHT[effect.kind] or EFFECT_WEIGHT.unknown
+	if object.supersedes and FK.Data and FK.Data.EffectiveBuff
+		and FK.Data.EffectiveBuff(object) then
+		weight = math.max(weight, EFFECT_WEIGHT.buff)
+	end
+	return weight
 end
 
 local function buffLabel(key)
@@ -118,7 +144,7 @@ function Plan.Evaluate(state)
 								objectId = objectId,
 								name = object.name,
 								effectKey = key,
-								score = EFFECT_WEIGHT[effect.kind] or EFFECT_WEIGHT.unknown,
+								score = weightFor(object),
 								tier = object.tier or 1,
 								confidence = object.confidence or "unknown",
 							})

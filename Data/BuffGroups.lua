@@ -7,8 +7,20 @@ FK.Data = FK.Data or {}
 -- already has is a wasted slot, so every buff a camp object can give belongs to
 -- a group here, together with the class buffs that make it redundant.
 --
--- `confidence` follows the same scale as Data/CampObjects.lua. See docs/DATA.md.
+-- Each group's `exclusive` is the spell the client's own tooltip names, which
+-- is what decides the grouping. See docs/DATA.md for where those tooltips came
+-- from.
+--
+-- `confidence` follows the same scale as Data/CampObjects.lua.
 FK.Data.buffGroups = {
+	strength = {
+		label = "Strength",
+		classBuffs = {
+			-- The Sharpening Wheel's tooltip names this one specifically.
+			{ spell = "Strength of Earth Totem", class = "SHAMAN" },
+		},
+		confidence = "reported",
+	},
 	attack_power = {
 		label = "Attack Power",
 		classBuffs = {
@@ -37,6 +49,34 @@ FK.Data.buffGroups = {
 			-- Divine Spirit is baseline for priests in Forever rather than a
 			-- Discipline talent, so any priest covers this group.
 			{ spell = "Divine Spirit", class = "PRIEST" },
+		},
+		confidence = "reported",
+	},
+	mana_regen = {
+		label = "Mana regeneration",
+		classBuffs = {
+			{ spell = "Blessing of Wisdom", class = "PALADIN" },
+		},
+		confidence = "reported",
+	},
+	armor = {
+		label = "Armor",
+		classBuffs = {
+			{ spell = "Mark of the Wild", class = "DRUID" },
+		},
+		confidence = "reported",
+	},
+	crit = {
+		label = "Critical strike",
+		classBuffs = {
+			{ spell = "Moonkin Aura", class = "DRUID" },
+		},
+		confidence = "reported",
+	},
+	all_stats = {
+		label = "All stats",
+		classBuffs = {
+			{ spell = "Blessing of Kings", class = "PALADIN" },
 		},
 		confidence = "reported",
 	},

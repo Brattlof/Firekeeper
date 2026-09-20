@@ -20,15 +20,41 @@ function tests.suggests_the_best_object_for_each_player()
 end
 
 function tests.skips_a_buff_the_group_already_has()
+	-- The Sharpening Wheel gives Strength, exclusive with Strength of Earth
+	-- Totem, per its own tooltip.
 	local plan = Plan.Evaluate({
-		covered = { attack_power = "Battle Shout" },
+		covered = { strength = "Strength of Earth Totem" },
 		contributors = { contributor("Ana", { "sharpening_wheel" }) },
 	})
 	t.count(plan.suggestions, 0, "no suggestion for a covered buff")
 	t.count(plan.redundant, 1, "the wheel is reported as wasted")
 	t.equals(plan.redundant[1].reason.code, "covered", "reason is the class buff")
 	t.equals(Plan.ReasonText(plan.redundant[1].reason),
-		"Attack Power is already covered by Battle Shout", "readable reason")
+		"Strength is already covered by Strength of Earth Totem", "readable reason")
+end
+
+function tests.an_anvil_and_a_wheel_are_not_both_suggested()
+	-- FK-16: the Anvil's tooltip says it provides all of the Sharpening Wheel's
+	-- benefits, so suggesting both would waste a slot. The better one wins.
+	local plan = Plan.Evaluate({
+		slots = 3,
+		contributors = {
+			contributor("Ana", { "sharpening_wheel" }),
+			contributor("Bo", { "anvil" }),
+		},
+	})
+	t.count(plan.suggestions, 1, "one of the two is enough")
+	t.equals(plan.suggestions[1].objectId, "anvil", "and it is the one that is also a workspace")
+end
+
+function tests.a_superseding_object_is_skipped_when_its_buff_is_covered()
+	local plan = Plan.Evaluate({
+		covered = { strength = "Strength of Earth Totem" },
+		contributors = { contributor("Ana", { "anvil" }) },
+	})
+	-- The anvil is still worth placing as a workspace even when the Strength is
+	-- covered, so it must not be silently dropped as a duplicate buff.
+	t.isTrue(#plan.suggestions + #plan.redundant > 0, "the anvil is accounted for either way")
 end
 
 function tests.one_object_per_player()

@@ -2,396 +2,330 @@ local _, FK = ...
 
 FK.Data = FK.Data or {}
 
--- Every profession has three campsite objects. The first is learned at skill 20
--- from a trainer or a camping NPC; the later ones come from Blueprint recipes
--- that drop from dungeon bosses.
+-- What each profession can put on a fire.
 --
--- All thirty-six names, professions and tiers below come from a public guide
--- (see docs/DATA.md). What those objects actually *do* is mostly still unknown:
--- only the effects marked below appear in a source we can cite. Nothing here is
--- invented to fill a gap, so most entries carry `effect = { kind = "unknown" }`
--- and `/fk gaps` lists them as work still to do.
+-- Every entry below, including the exact buff amounts, comes from the client's
+-- own item tooltip, read through Wowhead's Forever database:
 --
--- confidence — how well the entry itself (name, profession, tier) is attested:
+--   https://nether.wowhead.com/forever/tooltip/item/<itemId>
+--
+-- Each `itemId` was checked by fetching it and confirming the name came back as
+-- expected, so the ids are verified rather than assumed. See docs/DATA.md for
+-- the method and its limits.
+--
+-- `amounts` is a buff's value at each level band the tooltip lists, lowest
+-- first: camp buffs scale with level, so a single number would be wrong.
+-- `percent` is used instead where the tooltip gives a flat percentage.
+--
+-- confidence:
 --   confirmed — observed in the game client and reported with a build number
---   reported  — named in an official panel, patch note, or guide site
---   unknown   — the object exists but we cannot place it yet
+--   reported  — from the client's tooltip data, an official panel, or a guide
+--   unknown   — the object exists, but we cannot say what it does
 --
--- effect kinds — what the object does, tracked separately from `confidence`,
--- because a name can be well sourced while its buff is not:
+-- effect kinds:
 --   buff      — a one-hour campsite buff, keyed to Data/BuffGroups.lua
 --   workspace — stands in for a city profession station (anvil, lab, ...)
---   slots     — raises how many objects the campsite holds
---   utility   — something else useful (vendor, repair, ...)
+--   slots     — a campfire, which is the fire itself rather than a thing on it
+--   utility   — something else useful (vendor, repair, rested experience, ...)
 --   unknown   — the object is real but we cannot say what it does yet
+--
+-- `supersedes` names a lower-tier object whose benefits this one also provides,
+-- from the tooltip phrase "provides all of the benefits of". The planner uses
+-- it to avoid suggesting both: an Anvil already carries the Sharpening Wheel's
+-- buff, so placing both wastes a slot.
 FK.Data.campObjects = {
 	-- Alchemy
 	{
-		id = "mana_well",
-		name = "Mana Well",
-		profession = "Alchemy",
-		tier = 1,
-		skill = 20,
-		source = "trainer",
-		effect = { kind = "unknown" },
+		id = "mana_well", name = "Mana Well", itemId = 279956,
+		profession = "Alchemy", tier = 1, skill = 20, source = "trainer",
+		effect = { kind = "buff", buff = "mana_regen", amounts = { 10, 15, 20, 24, 29 } },
+		note = "Mana per 5 seconds.",
 		confidence = "reported",
 	},
 	{
-		id = "fermenter",
-		name = "Fermenter",
-		profession = "Alchemy",
-		tier = 2,
-		source = "blueprint",
-		effect = { kind = "unknown" },
-		confidence = "reported",
-	},
-	{
-		id = "alchemy_laboratory",
-		name = "Alchemy Laboratory",
-		profession = "Alchemy",
-		tier = 3,
-		source = "blueprint",
+		id = "fermenter", name = "Fermenter", itemId = 279970,
+		profession = "Alchemy", tier = 2, skill = 140, source = "blueprint",
 		effect = { kind = "workspace", workspace = "alchemy" },
+		supersedes = "mana_well",
+		note = "Allows the creation of certain reagents.",
 		confidence = "reported",
-		note = "Earlier guides called this the Alchemy Lab and placed it at tier 1.",
+	},
+	{
+		id = "alchemy_laboratory", name = "Alchemy Laboratory", itemId = 279990,
+		profession = "Alchemy", tier = 3, skill = 300, source = "blueprint",
+		effect = { kind = "workspace", workspace = "alchemy" },
+		supersedes = "mana_well",
+		confidence = "reported",
 	},
 
 	-- Blacksmithing
 	{
-		id = "sharpening_wheel",
-		name = "Sharpening Wheel",
-		profession = "Blacksmithing",
-		tier = 1,
-		skill = 20,
-		source = "trainer",
-		effect = { kind = "buff", buff = "attack_power" },
+		id = "sharpening_wheel", name = "Sharpening Wheel", itemId = 279944,
+		profession = "Blacksmithing", tier = 1, skill = 20, source = "trainer",
+		effect = { kind = "buff", buff = "strength", amounts = { 6, 11, 20, 34 } },
+		note = "Strength, not Attack Power. Blizzard's deep dive recap said Attack Power "
+			.. "and the guide sites repeated it, but the item's own tooltip says Strength, "
+			.. "exclusive with Strength of Earth Totem.",
 		confidence = "reported",
-		note = "Three guides and Blizzard's deep dive recap say Attack Power; the beta database reportedly says level-scaled Strength, exclusive with Strength of Earth Totem. A tooltip settles it.",
 	},
 	{
-		id = "anvil",
-		name = "Anvil",
-		profession = "Blacksmithing",
-		tier = 2,
-		skill = 140,
-		source = "blueprint",
+		id = "anvil", name = "Anvil", itemId = 279988,
+		profession = "Blacksmithing", tier = 2, skill = 140, source = "blueprint",
 		effect = { kind = "workspace", workspace = "blacksmithing" },
+		supersedes = "sharpening_wheel",
 		confidence = "reported",
-		note = "Skill level reported; the exact effect is not confirmed.",
 	},
 	{
-		id = "master_forge",
-		name = "Master Forge",
-		profession = "Blacksmithing",
-		tier = 3,
-		skill = 300,
-		source = "blueprint",
+		id = "master_forge", name = "Master Forge", itemId = 279955,
+		profession = "Blacksmithing", tier = 3, skill = 300, source = "blueprint",
 		effect = { kind = "workspace", workspace = "blacksmithing" },
+		supersedes = "sharpening_wheel",
 		confidence = "reported",
-		note = "Skill level reported; the exact effect is not confirmed.",
 	},
 
 	-- Enchanting
 	{
-		id = "enchanted_lute",
-		name = "Enchanted Lute",
-		profession = "Enchanting",
-		tier = 1,
-		skill = 20,
-		source = "trainer",
-		effect = { kind = "unknown" },
+		id = "enchanted_lute", name = "Enchanted Lute", itemId = 279976,
+		profession = "Enchanting", tier = 1, skill = 20, source = "trainer",
+		effect = { kind = "buff", buff = "armor", amounts = { 28, 71, 114, 163, 211, 260, 308 } },
+		note = "The tooltip interleaves three scaling tracks: Armor, all stats and all "
+			.. "resistances. Only the Armor numbers are recorded, because the other two "
+			.. "cannot be read off unambiguously.",
 		confidence = "reported",
 	},
 	{
-		id = "arcane_salvager",
-		name = "Arcane Salvager",
-		profession = "Enchanting",
-		tier = 2,
-		source = "blueprint",
-		effect = { kind = "unknown" },
+		id = "arcane_salvager", name = "Arcane Salvager", itemId = 279985,
+		profession = "Enchanting", tier = 2, skill = 140, source = "blueprint",
+		effect = { kind = "utility", utility = "disenchanting" },
+		supersedes = "enchanted_lute",
 		confidence = "reported",
 	},
 	{
-		id = "arcane_forge",
-		name = "Arcane Forge",
-		profession = "Enchanting",
-		tier = 3,
-		source = "blueprint",
-		effect = { kind = "unknown" },
+		id = "arcane_forge", name = "Arcane Forge", itemId = 279987,
+		profession = "Enchanting", tier = 3, skill = 300, source = "blueprint",
+		effect = { kind = "workspace", workspace = "enchanting" },
+		supersedes = "enchanted_lute",
 		confidence = "reported",
 	},
 
-	-- Engineering
+	-- Engineering: the one chain whose tooltips do not promise the lower tier's
+	-- benefits, so nothing supersedes anything here.
 	{
-		id = "reagent_bot",
-		name = "Reagent Bot",
-		profession = "Engineering",
-		tier = 1,
-		skill = 20,
-		source = "trainer",
-		effect = { kind = "unknown" },
+		id = "reagent_bot", name = "Reagent Bot", itemId = 279950,
+		profession = "Engineering", tier = 1, skill = 20, source = "trainer",
+		effect = { kind = "utility", utility = "reagent_vendor" },
 		confidence = "reported",
 	},
 	{
-		id = "repair_bot",
-		name = "Repair Bot",
-		profession = "Engineering",
-		tier = 2,
-		source = "blueprint",
-		effect = { kind = "unknown" },
+		id = "repair_bot", name = "Repair Bot", itemId = 279949,
+		profession = "Engineering", tier = 2, skill = 140, source = "blueprint",
+		effect = { kind = "utility", utility = "repair" },
+		note = "Sells reagents and repairs gear, so it covers the Reagent Bot in practice, "
+			.. "but its tooltip does not say so.",
 		confidence = "reported",
 	},
 	{
-		id = "anarchists_workbench",
-		name = "Anarchist's Workbench",
-		profession = "Engineering",
-		tier = 3,
-		source = "blueprint",
-		effect = { kind = "unknown" },
+		id = "anarchists_workbench", name = "Anarchist's Workbench", itemId = 279989,
+		profession = "Engineering", tier = 3, skill = 300, source = "blueprint",
+		effect = { kind = "workspace", workspace = "engineering" },
 		confidence = "reported",
 	},
 
 	-- Herbalism
 	{
-		id = "incense_candle",
-		name = "Incense Candle",
-		profession = "Herbalism",
-		tier = 1,
-		skill = 20,
-		source = "trainer",
-		effect = { kind = "buff", buff = "intellect" },
+		id = "incense_candle", name = "Incense Candle", itemId = 279962,
+		profession = "Herbalism", tier = 1, skill = 20, source = "trainer",
+		effect = { kind = "buff", buff = "intellect", amounts = { 2, 6, 12, 18, 25 } },
 		confidence = "reported",
 	},
 	{
-		id = "greenhouse",
-		name = "Greenhouse",
-		profession = "Herbalism",
-		tier = 2,
-		source = "blueprint",
-		effect = { kind = "unknown" },
+		id = "greenhouse", name = "Greenhouse", itemId = 279964,
+		profession = "Herbalism", tier = 2, skill = 140, source = "blueprint",
+		effect = { kind = "utility", utility = "herb_growing" },
+		supersedes = "incense_candle",
 		confidence = "reported",
 	},
 	{
-		id = "seed_hybridizer",
-		name = "Seed Hybridizer",
-		profession = "Herbalism",
-		tier = 3,
-		source = "blueprint",
-		effect = { kind = "unknown" },
+		id = "seed_hybridizer", name = "Seed Hybridizer", itemId = 279947,
+		profession = "Herbalism", tier = 3, skill = 300, source = "blueprint",
+		effect = { kind = "utility", utility = "seed_hybridising" },
+		supersedes = "incense_candle",
 		confidence = "reported",
 	},
 
 	-- Leatherworking
 	{
-		id = "camp_tent",
-		name = "Camp Tent",
-		profession = "Leatherworking",
-		tier = 1,
-		skill = 20,
-		source = "trainer",
-		effect = { kind = "unknown" },
+		id = "camp_tent", name = "Camp Tent", itemId = 279978,
+		profession = "Leatherworking", tier = 1, skill = 20, source = "trainer",
+		effect = { kind = "utility", utility = "rested_experience" },
+		note = "Raises Rested experience to 5% of a level, and does nothing if yours is "
+			.. "already higher. No class buff competes with it.",
 		confidence = "reported",
 	},
 	{
-		id = "tanning_rack",
-		name = "Tanning Rack",
-		profession = "Leatherworking",
-		tier = 2,
-		source = "blueprint",
+		id = "tanning_rack", name = "Tanning Rack", itemId = 279941,
+		profession = "Leatherworking", tier = 2, skill = 140, source = "blueprint",
 		effect = { kind = "workspace", workspace = "leatherworking" },
+		supersedes = "camp_tent",
 		confidence = "reported",
-		note = "Some advanced Leatherworking recipes require it.",
 	},
 	{
-		id = "sewing_machine",
-		name = "Sewing Machine",
-		profession = "Leatherworking",
-		tier = 3,
-		source = "blueprint",
-		effect = { kind = "unknown" },
+		id = "sewing_machine", name = "Sewing Machine", itemId = 279945,
+		profession = "Leatherworking", tier = 3, skill = 300, source = "blueprint",
+		effect = { kind = "workspace", workspace = "leatherworking" },
+		supersedes = "camp_tent",
 		confidence = "reported",
 	},
 
 	-- Mining
 	{
-		id = "lodestone",
-		name = "Lodestone",
-		profession = "Mining",
-		tier = 1,
-		skill = 20,
-		source = "trainer",
-		effect = { kind = "buff", buff = "attack_power" },
-		confidence = "reported",
-		note = "Melee Attack Power, exclusive with Blessing of Might, per two guides.",
-	},
-	{
-		id = "rock_garden",
-		name = "Rock Garden",
-		profession = "Mining",
-		tier = 2,
-		source = "blueprint",
-		effect = { kind = "unknown" },
+		id = "lodestone", name = "Lodestone", itemId = 279960,
+		profession = "Mining", tier = 1, skill = 20, source = "trainer",
+		effect = { kind = "buff", buff = "attack_power", amounts = { 12, 20, 32, 49, 67, 90 } },
+		note = "Melee attack power specifically.",
 		confidence = "reported",
 	},
 	{
-		id = "molten_foundry",
-		name = "Molten Foundry",
-		profession = "Mining",
-		tier = 3,
-		source = "blueprint",
-		effect = { kind = "unknown" },
+		id = "rock_garden", name = "Rock Garden", itemId = 279948,
+		profession = "Mining", tier = 2, skill = 140, source = "blueprint",
+		effect = { kind = "utility", utility = "mining_node" },
+		supersedes = "lodestone",
+		confidence = "reported",
+	},
+	{
+		id = "molten_foundry", name = "Molten Foundry", itemId = 279952,
+		profession = "Mining", tier = 3, skill = 300, source = "blueprint",
+		effect = { kind = "workspace", workspace = "mining" },
+		supersedes = "lodestone",
 		confidence = "reported",
 	},
 
 	-- Skinning
 	{
-		id = "camp_chair",
-		name = "Camp Chair",
-		profession = "Skinning",
-		tier = 1,
-		skill = 20,
-		source = "trainer",
-		effect = { kind = "unknown" },
+		id = "camp_chair", name = "Camp Chair", itemId = 279979,
+		profession = "Skinning", tier = 1, skill = 20, source = "trainer",
+		effect = { kind = "buff", buff = "crit", percent = 2 },
+		note = "2% critical strike with all spells and attacks: a flat percentage rather "
+			.. "than a level-scaled amount.",
 		confidence = "reported",
 	},
 	{
-		id = "field_guide",
-		name = "Field Guide",
-		profession = "Skinning",
-		tier = 2,
-		source = "blueprint",
-		effect = { kind = "unknown" },
-		confidence = "reported",
+		id = "field_guide", name = "Field Guide", itemId = 279969,
+		profession = "Skinning", tier = 2, skill = 140, source = "blueprint",
+		effect = { kind = "utility", utility = "track_beasts" },
+		supersedes = "camp_chair",
 		note = "Shares a name with the Legacy perk that shortens the camp cooldown; unrelated.",
+		confidence = "reported",
 	},
 	{
-		id = "trappers_workbench",
-		name = "Trapper's Workbench",
-		profession = "Skinning",
-		tier = 3,
-		source = "blueprint",
-		effect = { kind = "unknown" },
+		id = "trappers_workbench", name = "Trapper's Workbench", itemId = 279938,
+		profession = "Skinning", tier = 3, skill = 300, source = "blueprint",
+		effect = { kind = "utility", utility = "trap" },
+		supersedes = "camp_chair",
 		confidence = "reported",
 	},
 
 	-- Tailoring
 	{
-		id = "faction_banner",
-		name = "Faction Banner",
-		profession = "Tailoring",
-		tier = 1,
-		skill = 20,
-		source = "trainer",
-		effect = { kind = "buff", buff = "spirit" },
+		id = "faction_banner", name = "Faction Banner", itemId = 279973,
+		itemIdByFaction = { Alliance = 279973, Horde = 279972 },
+		profession = "Tailoring", tier = 1, skill = 20, source = "trainer",
+		effect = { kind = "buff", buff = "spirit", amounts = { 14, 19, 27, 32 } },
+		note = "Two items, one per faction, and it only buffs your own faction.",
 		confidence = "reported",
 	},
 	{
-		id = "spinning_wheel",
-		name = "Spinning Wheel",
-		profession = "Tailoring",
-		tier = 2,
-		source = "blueprint",
-		effect = { kind = "unknown" },
+		id = "spinning_wheel", name = "Spinning Wheel", itemId = 279943,
+		profession = "Tailoring", tier = 2, skill = 140, source = "blueprint",
+		effect = { kind = "workspace", workspace = "tailoring" },
+		supersedes = "faction_banner",
 		confidence = "reported",
 	},
 	{
-		id = "loom",
-		name = "Loom",
-		profession = "Tailoring",
-		tier = 3,
-		source = "blueprint",
-		effect = { kind = "unknown" },
+		id = "loom", name = "Loom", itemId = 279959,
+		profession = "Tailoring", tier = 3, skill = 300, source = "blueprint",
+		effect = { kind = "workspace", workspace = "tailoring" },
+		supersedes = "faction_banner",
 		confidence = "reported",
 	},
 
-	-- Cooking: the campfire itself, which is why these buy slots rather than buffs.
+	-- Cooking. The campfire kits are the fire itself: each says it allows a
+	-- number of *additional* camp features, which is what settles whether an
+	-- upgraded fire eats a slot (docs/RESEARCH.md, FK-2).
 	{
-		id = "basic_campfire_kit",
-		name = "Basic Campfire Kit",
-		profession = "Cooking",
-		tier = 1,
-		skill = 20,
-		source = "trainer",
+		id = "basic_campfire_kit", name = "Basic Campfire Kit", itemId = 279981,
+		profession = "Cooking", tier = 1, skill = 1, source = "trainer",
 		effect = { kind = "slots", slots = 3 },
 		confidence = "reported",
 	},
 	{
-		id = "journeyman_campfire_kit",
-		name = "Journeyman Campfire Kit",
-		profession = "Cooking",
-		tier = 2,
-		source = "blueprint",
+		id = "journeyman_campfire_kit", name = "Journeyman Campfire Kit", itemId = 279961,
+		profession = "Cooking", tier = 2, source = "blueprint",
 		effect = { kind = "slots", slots = 5 },
 		confidence = "reported",
 	},
 	{
-		id = "expert_campfire_kit",
-		name = "Expert Campfire Kit",
-		profession = "Cooking",
-		tier = 3,
-		source = "blueprint",
+		id = "expert_campfire_kit", name = "Expert Campfire Kit", itemId = 279974,
+		profession = "Cooking", tier = 3, source = "blueprint",
 		effect = { kind = "slots", slots = 10 },
+		confidence = "reported",
+	},
+	{
+		id = "cookies_feast", name = "Cookie's Feast", itemId = 279957,
+		profession = "Cooking", tier = 2, skill = 140, source = "blueprint",
+		effect = { kind = "utility", utility = "feast" },
+		note = "Stamina-boosting food. Needs a cooking fire nearby rather than any campfire.",
+		confidence = "reported",
+	},
+	{
+		id = "iron_oven", name = "Iron Oven", itemId = 279982,
+		profession = "Cooking", tier = 3, skill = 300, source = "blueprint",
+		effect = { kind = "workspace", workspace = "cooking" },
 		confidence = "reported",
 	},
 
 	-- First Aid
 	{
-		id = "first_aid_kit",
-		name = "First Aid Kit",
-		profession = "First Aid",
-		tier = 1,
-		skill = 20,
-		source = "trainer",
-		effect = { kind = "buff", buff = "stamina" },
-		confidence = "reported",
-		note = "Stamina, exclusive with Power Word: Fortitude, per two guides. Earlier guides called this the Camping Kit.",
-	},
-	{
-		id = "toxin_study",
-		name = "Toxin Study",
-		profession = "First Aid",
-		tier = 2,
-		source = "blueprint",
-		effect = { kind = "unknown" },
+		id = "first_aid_kit", name = "First Aid Kit", itemId = 279968,
+		profession = "First Aid", tier = 1, skill = 20, source = "trainer",
+		effect = { kind = "buff", buff = "stamina", amounts = { 3, 8, 21, 34, 45, 56 } },
 		confidence = "reported",
 	},
 	{
-		id = "plague_doctors_laboratory",
-		name = "Plague Doctor's Laboratory",
-		profession = "First Aid",
-		tier = 3,
-		source = "blueprint",
-		effect = { kind = "unknown" },
+		id = "toxin_study", name = "Toxin Study", itemId = 279940,
+		profession = "First Aid", tier = 2, skill = 140, source = "blueprint",
+		effect = { kind = "utility", utility = "potions" },
+		supersedes = "first_aid_kit",
+		confidence = "reported",
+	},
+	{
+		id = "plague_doctors_laboratory", name = "Plague Doctor's Laboratory", itemId = 279951,
+		profession = "First Aid", tier = 3, skill = 300, source = "blueprint",
+		effect = { kind = "utility", utility = "potions" },
+		supersedes = "first_aid_kit",
 		confidence = "reported",
 	},
 
 	-- Fishing
 	{
-		id = "fish_bowl",
-		name = "Fish Bowl",
-		profession = "Fishing",
-		tier = 1,
-		skill = 20,
-		source = "trainer",
-		effect = { kind = "unknown" },
+		id = "fish_bowl", name = "Fish Bowl", itemId = 279967,
+		profession = "Fishing", tier = 1, skill = 20, source = "trainer",
+		effect = { kind = "buff", buff = "all_stats", percent = 8 },
+		note = "8% increased stats: a flat percentage rather than a level-scaled amount.",
 		confidence = "reported",
 	},
 	{
-		id = "fishing_rack",
-		name = "Fishing Rack",
-		profession = "Fishing",
-		tier = 2,
-		source = "blueprint",
-		effect = { kind = "unknown" },
+		id = "fishing_rack", name = "Fishing Rack", itemId = 279965,
+		profession = "Fishing", tier = 2, skill = 140, source = "blueprint",
+		effect = { kind = "utility", utility = "uncommon_fish" },
+		supersedes = "fish_bowl",
 		confidence = "reported",
 	},
 	{
-		id = "fishing_hut",
-		name = "Fishing Hut",
-		profession = "Fishing",
-		tier = 3,
-		source = "blueprint",
-		effect = { kind = "unknown" },
+		id = "fishing_hut", name = "Fishing Hut", itemId = 279966,
+		profession = "Fishing", tier = 3, skill = 300, source = "blueprint",
+		effect = { kind = "utility", utility = "rare_fish" },
+		supersedes = "fish_bowl",
 		confidence = "reported",
 	},
 }
@@ -424,8 +358,7 @@ function FK.Data.GetObject(id)
 end
 
 -- The Cooking campfires, smallest first. `/fk new expert` and the slot guard
--- both read this rather than hard-coding three, five and ten, so a campfire
--- nobody has found yet only has to be added to the table above.
+-- both read this rather than hard-coding three, five and ten.
 local campfires = {}
 for _, object in ipairs(FK.Data.campObjects) do
 	if object.effect and object.effect.kind == "slots" then
@@ -484,7 +417,6 @@ function FK.Data.Gaps()
 end
 
 --- Objects we can name but whose effect nobody has reported yet.
--- The names came from a guide; the tooltips have to come from players.
 function FK.Data.UnknownEffects()
 	local unknown = {}
 	for _, object in ipairs(FK.Data.campObjects) do
@@ -493,4 +425,22 @@ function FK.Data.UnknownEffects()
 		end
 	end
 	return unknown
+end
+
+--- The buff an object ends up providing, following `supersedes` to the object
+-- whose benefits it carries. An Anvil gives the Sharpening Wheel's Strength.
+function FK.Data.EffectiveBuff(object)
+	local seen = {}
+	while object do
+		local effect = object.effect
+		if effect and effect.kind == "buff" then
+			return effect.buff, object
+		end
+		if not object.supersedes or seen[object.id] then
+			return nil
+		end
+		seen[object.id] = true
+		object = byId[object.supersedes]
+	end
+	return nil
 end
