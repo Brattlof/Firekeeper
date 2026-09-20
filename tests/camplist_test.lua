@@ -11,6 +11,7 @@ local function camp(fields)
 		free = fields.free or 2,
 		slots = fields.slots or 3,
 		professions = fields.professions or { "Blacksmithing" },
+		layer = fields.layer,
 	}
 end
 
@@ -103,6 +104,50 @@ function tests.without_a_position_the_list_is_ordered_by_what_we_heard_last()
 	local active = CampList.Active(600, nil)
 	t.equals(active[1].host, "Recent", "most recently heard of first")
 	t.equals(active[1].sameMap, false, "and nothing claims to be on your map")
+end
+
+function tests.the_layer_comes_out_of_a_creature_guid()
+	-- Creature-0-<server>-<instance>-<zoneUID>-<id>-<spawn>; the fifth field is
+	-- the layer.
+	t.equals(CampList.LayerFromGuid("Creature-0-3893-1-146-448-000082B91C"), 146, "a creature")
+	t.equals(CampList.LayerFromGuid("GameObject-0-3893-1-7-1731-000082B91C"), 7, "an object")
+	t.equals(CampList.LayerFromGuid("Vehicle-0-3893-1-22-448-000082B91C"), 22, "a vehicle")
+end
+
+function tests.a_player_guid_has_no_layer()
+	-- Which is the whole reason the layer has to be read off something else.
+	t.equals(CampList.LayerFromGuid("Player-970-0002FD64"), nil, "players carry none")
+	t.equals(CampList.LayerFromGuid("Pet-0-3893-1-146-448-000082B91C"), nil, "and neither do pets")
+end
+
+function tests.rubbish_is_not_a_layer()
+	t.equals(CampList.LayerFromGuid(nil), nil, "nil")
+	t.equals(CampList.LayerFromGuid(""), nil, "empty")
+	t.equals(CampList.LayerFromGuid("Creature-0-3893-1-0-448-0000"), nil, "layer zero is no layer")
+	t.equals(CampList.LayerFromGuid("Creature"), nil, "a bare type")
+end
+
+function tests.the_layer_survives_the_wire()
+	local wire = CampList.EncodeHost(camp({ layer = 146 }))
+	local back = CampList.DecodeHost(wire:match("^HOST:(.*)$"))
+	t.equals(back.layer, 146, "the layer comes back")
+	t.count(back.professions, 1, "and the professions still parse after it")
+end
+
+function tests.an_unknown_layer_goes_over_as_nothing()
+	local wire = CampList.EncodeHost(camp({ layer = nil }))
+	local back = CampList.DecodeHost(wire:match("^HOST:(.*)$"))
+	t.equals(back.layer, nil, "zero on the wire reads back as unknown, not layer 0")
+end
+
+function tests.a_message_from_before_the_layer_field_still_decodes()
+	-- Six fields is what an older client sends. It must be understood rather
+	-- than dropped.
+	local back = CampList.DecodeHost("1440|5000|5000|2|3|Alchemy,Mining")
+	t.isTrue(back, "it decodes")
+	t.equals(back.layer, nil, "with no layer")
+	t.equals(back.slots, 3, "and the rest intact")
+	t.count(back.professions, 2, "including both professions")
 end
 
 return tests

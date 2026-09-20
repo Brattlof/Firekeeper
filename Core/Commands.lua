@@ -212,6 +212,9 @@ function handlers.find(rest)
 	FK.Print("camps heard of (|cffffff00/fk find <n>|r for a waypoint):")
 	for position, camp in ipairs(found) do
 		local where = camp.sameMap and ("%.1f, %.1f"):format(camp.x * 100, camp.y * 100) or "another map"
+		if camp.otherLayer then
+			where = where .. " |cffff8c38on another layer|r"
+		end
 		FK.Print("  %d. %s — %d of %d slots free, %s%s",
 			position, camp.host, camp.free, camp.slots, where,
 			#camp.professions > 0 and (" (" .. table.concat(camp.professions, ", ") .. ")") or "")
