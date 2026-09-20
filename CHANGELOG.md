@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.2.0 — 20 September 2026
+
 - The panel is now five tabs and covers everything the addon does, so nothing needs a slash
   command any more. **Place** shows every object you can place as icons, coloured green for
   the best choice here and red for one that would be wasted, and you put an object on the
@@ -13,6 +15,15 @@
 - Click a camp on the **Find** tab to put a waypoint on it, and set a profession by hand on
   **You** by cycling to its name and typing a skill level. Those were the last two things
   that still needed a slash command, and one of them was being advertised inside the panel.
+
+**Known limits, unchanged from 0.1.1**
+
+- This beta build writes saved settings but never reads them back, so professions, Legacy
+  ranks and alt cooldowns start fresh each session. The addon says so at login.
+- Nothing in the group-sharing half has been confirmed to reach another player.
+- Every camp object effect is read from the client's tooltip data rather than seen in game.
+- The panel itself has been executed against a mock but never looked at by a human, so
+  expect rough edges in the layout rather than in the behaviour.
 
 ## 0.1.1 — 20 September 2026
 
