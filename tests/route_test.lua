@@ -33,12 +33,19 @@ function tests.a_maxed_profession_has_nothing_left_to_wait_for()
 end
 
 function tests.objects_with_no_known_requirement_are_named_not_hidden()
-	-- Only tier 1 has a reported skill level for most professions, so the
-	-- other two should be counted rather than quietly dropped.
+	-- Every camp object now carries its skill level, read from its tooltip, so
+	-- Herbalism's chain is fully known: the candle is placeable at 20 and the
+	-- next one is a real number away.
 	local entry = only(Route.Evaluate({ Herbalism = 20 }), "Herbalism")
 	t.count(entry.placeable, 1, "the candle is ready")
-	t.equals(entry.next, nil, "nothing else has a known requirement")
-	t.count(entry.blueprints, 2, "but two more exist and we say so")
+	t.equals(entry.next.name, "Greenhouse", "the greenhouse is next")
+	t.equals(entry.short, 120, "and it is 120 skill away")
+	t.count(entry.blueprints, 0, "nothing is left without a requirement")
+
+	-- The upgraded campfires are the remaining exception: their tooltips give no
+	-- skill level, so they are listed as needing a blueprint rather than hidden.
+	local cooking = only(Route.Evaluate({ Cooking = 1 }), "Cooking")
+	t.count(cooking.blueprints, 2, "the journeyman and expert fires have no stated skill")
 end
 
 function tests.the_nearest_unlock_is_listed_first()

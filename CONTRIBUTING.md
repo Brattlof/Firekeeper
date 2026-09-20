@@ -2,11 +2,17 @@
 
 ## The most valuable contribution
 
-Camp objects you have seen in game. Open a
-[camp object sighting](../../issues/new?template=camp-object.yml) with the tooltip text
-and the client build from `/fk caps`. All thirty-six objects are named now, but
-twenty-four of them are only a name: nobody has reported what they actually do. `/fk gaps`
-prints that list.
+Two things, now that the object table is filled in from the client's tooltip data
+(see [docs/DATA.md](docs/DATA.md)):
+
+**Where Blueprints drop.** Nobody has published a single source for any tier-2 or tier-3
+recipe. If you get one, say which boss or vendor gave it.
+
+**A tooltip screenshot from the beta.** Every effect in the table is datamined, so it is
+marked `reported` rather than `confirmed`. Open a
+[camp object sighting](../../issues/new?template=camp-object.yml) with the tooltip text and
+the client build from `/fk caps`, and that row gets promoted. The Sharpening Wheel is the
+one to settle first: its tooltip says Strength, Blizzard's recap said Attack Power.
 
 Answering a question in [docs/RESEARCH.md](docs/RESEARCH.md) is worth as much. Say which
 build you tested on and what happened, including "it did nothing".

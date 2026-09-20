@@ -3,12 +3,18 @@ local FK, t = ...
 local Data = FK.Data
 local tests = {}
 
-function tests.every_profession_has_three_objects()
-	t.count(Data.campObjects, 36, "twelve professions, three objects each")
+function tests.every_profession_has_at_least_three_objects()
+	-- Thirty-eight, not thirty-six. The set is eleven professions times three,
+	-- plus the Horde banner's own item, plus Cooking's Cookie's Feast and Iron
+	-- Oven, plus the three campfire kits, which are the fire rather than a thing
+	-- placed on it.
+	t.count(Data.campObjects, 38, "every object we have a tooltip for")
 	t.count(Data.Gaps(), 0, "no profession is short")
 	for _, profession in ipairs(Data.professions) do
-		t.count(Data.campObjectsByProfession[profession] or {}, 3, profession .. " has three")
+		local known = Data.campObjectsByProfession[profession] or {}
+		t.isTrue(#known >= 3, profession .. " has at least three, got " .. #known)
 	end
+	t.count(Data.campObjectsByProfession.Cooking, 5, "Cooking has three fires and two features")
 end
 
 function tests.object_ids_are_unique()
@@ -31,20 +37,36 @@ function tests.a_buff_effect_names_a_group_that_exists()
 	end
 end
 
-function tests.unknown_effects_are_listed_for_reporting()
-	local unknown = Data.UnknownEffects()
-	t.isTrue(#unknown > 0, "the beta still has objects nobody has seen")
-	for _, object in ipairs(unknown) do
+function tests.anything_listed_as_unknown_really_is_unknown()
+	-- The list is empty today. The invariant still matters: if an object is ever
+	-- added without an effect, it must show up here and nowhere else.
+	for _, object in ipairs(Data.UnknownEffects()) do
 		t.equals(object.effect.kind, "unknown", object.name .. " is listed because its effect is unknown")
 	end
 end
 
-function tests.the_sourced_effects_are_the_ones_we_can_cite()
-	-- Twelve objects have an effect from a source we can point at; the rest are
-	-- a name and nothing more. If this number moves, docs/DATA.md moves with it.
-	local unknown = #Data.UnknownEffects()
-	t.equals(#Data.campObjects - unknown, 12, "twelve objects have a sourced effect")
-	t.equals(unknown, 24, "and twenty-four are still just a name")
+function tests.every_object_has_a_sourced_effect()
+	-- Every one of them now, read from the client's own tooltip. If this ever
+	-- regresses, docs/DATA.md is wrong too.
+	t.count(Data.UnknownEffects(), 0, "nothing is left as an unknown effect")
+end
+
+function tests.every_object_carries_the_item_id_it_was_verified_by()
+	for _, object in ipairs(Data.campObjects) do
+		t.isTrue(type(object.itemId) == "number", object.name .. " has an item id")
+	end
+end
+
+function tests.a_superseding_object_carries_the_lower_tier_buff()
+	-- "provides all of the benefits of a Sharpening Wheel", so the Anvil gives
+	-- Strength even though its own effect is a workspace.
+	t.equals((Data.EffectiveBuff(Data.GetObject("anvil"))), "strength", "the anvil carries Strength")
+	t.equals((Data.EffectiveBuff(Data.GetObject("master_forge"))), "strength", "so does the forge")
+	t.equals((Data.EffectiveBuff(Data.GetObject("sharpening_wheel"))), "strength", "and the wheel itself")
+
+	-- Engineering is the exception: neither tooltip promises the lower tier.
+	t.equals((Data.EffectiveBuff(Data.GetObject("repair_bot"))), nil, "the repair bot carries no buff")
+	t.equals((Data.EffectiveBuff(Data.GetObject("anarchists_workbench"))), nil, "nor the workbench")
 end
 
 function tests.campfires_are_sorted_and_capped()
