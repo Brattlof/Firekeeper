@@ -139,8 +139,19 @@ end
 -- Every action one of these performs is also a labelled button or a row inside
 -- a tab, so a texture this client happens not to have leaves a blank square
 -- rather than an unreachable feature.
-function Theme.IconButton(parent, texture, tooltipTitle, tooltipLine, onClick)
-	local button = CreateFrame("Button", nil, parent)
+function Theme.IconButton(parent, texture, tooltipTitle, tooltipLine, onClick, secureWanted)
+	local button
+	if secureWanted then
+		-- A button that has to *do* something protected — use an item — must be
+		-- a secure one, because an addon cannot do it on the player's behalf.
+		local ok, secure = pcall(CreateFrame, "Button", nil, parent, "SecureActionButtonTemplate")
+		if ok and secure then
+			button = secure
+			button.secure = true
+			button:RegisterForClicks("AnyUp", "LeftButtonDown", "RightButtonDown")
+		end
+	end
+	button = button or CreateFrame("Button", nil, parent)
 	button:SetSize(22, 22)
 
 	local background = Theme.Fill(button, "BACKGROUND", Theme.colors.ashLight)
@@ -177,7 +188,7 @@ function Theme.IconButton(parent, texture, tooltipTitle, tooltipLine, onClick)
 		end
 	end)
 	if onClick then
-		button:SetScript("OnClick", onClick)
+		button:SetScript(button.secure and "PostClick" or "OnClick", onClick)
 	end
 	return button
 end
