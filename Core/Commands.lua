@@ -8,7 +8,7 @@ local function usage()
 	FK.Print("commands:")
 	for _, line in ipairs({
 		"|cffffff00/fk|r — open the camp panel",
-		"|cffffff00/fk new [slots]|r — start a fresh camp (default 3 slots)",
+		"|cffffff00/fk new [slots|campfire]|r — start a fresh camp (default 3 slots)",
 		"|cffffff00/fk place <object>|r — record what you put on the fire",
 		"|cffffff00/fk plan|r — print the suggested placements",
 		"|cffffff00/fk announce|r — post the camp to party or say",
@@ -50,7 +50,30 @@ function handlers.plan()
 end
 
 function handlers.new(rest)
+	rest = (rest or ""):gsub("^%s*(.-)%s*$", "%1")
 	local slots = tonumber(rest)
+
+	if rest ~= "" and not slots then
+		slots = FK.Data.SlotsForCampfireName(rest)
+		if not slots then
+			FK.Print("|cffff4040no campfire called '%s'|r. Try a number, or: %s",
+				rest, table.concat(FK.Data.CampfireNames(), ", "))
+			return
+		end
+	end
+
+	if slots then
+		if slots < 1 or slots ~= math.floor(slots) then
+			FK.Print("|cffff4040a camp holds a whole number of objects, at least one|r")
+			return
+		end
+		local max = FK.Data.MaxCampfireSlots()
+		if slots > max then
+			FK.Print("|cff888888the largest campfire known holds %d; using that|r", max)
+			slots = max
+		end
+	end
+
 	FK.Camp:Reset(slots)
 	FK.Print("new camp with %d slots.", FK.Camp.slots)
 end

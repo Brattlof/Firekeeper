@@ -422,6 +422,53 @@ function FK.Data.GetObject(id)
 	return byId[id]
 end
 
+-- The Cooking campfires, smallest first. `/fk new expert` and the slot guard
+-- both read this rather than hard-coding three, five and ten, so a campfire
+-- nobody has found yet only has to be added to the table above.
+local campfires = {}
+for _, object in ipairs(FK.Data.campObjects) do
+	if object.effect and object.effect.kind == "slots" then
+		table.insert(campfires, object)
+	end
+end
+table.sort(campfires, function(a, b)
+	return (a.effect.slots or 0) < (b.effect.slots or 0)
+end)
+
+FK.Data.campfires = campfires
+
+--- The capacity of the largest campfire we know about.
+function FK.Data.MaxCampfireSlots()
+	local max = 0
+	for _, campfire in ipairs(campfires) do
+		max = math.max(max, campfire.effect.slots or 0)
+	end
+	return max > 0 and max or 3
+end
+
+--- Slots for a campfire named in a slash command: "expert", "Journeyman", ...
+function FK.Data.SlotsForCampfireName(text)
+	local needle = tostring(text or ""):lower():gsub("%s+", "_")
+	if needle == "" then
+		return nil
+	end
+	for _, campfire in ipairs(campfires) do
+		if campfire.id:find(needle, 1, true) or campfire.name:lower():find(needle, 1, true) then
+			return campfire.effect.slots, campfire.name
+		end
+	end
+	return nil
+end
+
+--- "Basic Campfire Kit (3)", for telling the player what they can type.
+function FK.Data.CampfireNames()
+	local names = {}
+	for _, campfire in ipairs(campfires) do
+		table.insert(names, ("%s (%d)"):format(campfire.name, campfire.effect.slots or 0))
+	end
+	return names
+end
+
 --- Professions with fewer than the expected three objects recorded.
 -- Drives `/fk gaps`, which turns the addon into a to-do list during the beta.
 function FK.Data.Gaps()
