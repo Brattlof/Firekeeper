@@ -73,9 +73,22 @@ minimap button is draggable around the edge and can be hidden with `/fk minimap`
 
 ## Install
 
-Copy the repository into the `Interface/AddOns` folder of your Forever install, in a
-folder named `Firekeeper`, or download a packaged release. Which product folder Forever
-uses is not confirmed yet; it is the one the client writes its `WTF` directory into.
+Download the zip from [releases](../../releases) and unpack it into your Forever install's
+add-on folder, which on a default Windows install is:
+
+```
+C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\AddOns
+```
+
+`_classic_beta_` is the product folder Forever uses — confirmed on 1.60.1.69913, which is
+also where the client keeps the `WTF` directory your settings live in. You should end up
+with `Interface\AddOns\Firekeeper\Firekeeper.toc`.
+
+Cloning the repository into the same place works too, and is what you want if you plan to
+send a pull request.
+
+Firekeeper needs a full client restart the first time, not a `/reload`: the game only reads
+the add-on list at startup.
 
 ## Commands
 
