@@ -26,6 +26,20 @@ local probes = {
 	unitAuras = function()
 		return C_UnitAuras ~= nil and type(C_UnitAuras.GetAuraDataByIndex) == "function"
 	end,
+	-- The call existing is not the same as being allowed to make it: it is
+	-- marked RequiresUnitAuraAccess with FailureMode = "Error", so this probe
+	-- actually reads an aura rather than checking a type. See docs/RESEARCH.md,
+	-- FK-10.
+	auraRead = function()
+		if C_UnitAuras == nil or type(C_UnitAuras.GetAuraDataByIndex) ~= "function" then
+			return false
+		end
+		local ok, aura = pcall(C_UnitAuras.GetAuraDataByIndex, "player", 1, "HELPFUL")
+		if not ok then
+			return false
+		end
+		return not (type(_G.issecretvalue) == "function" and _G.issecretvalue(aura))
+	end,
 	groupRoster = function()
 		return type(_G.GetNumGroupMembers) == "function" and type(_G.UnitClass) == "function"
 	end,

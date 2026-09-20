@@ -27,6 +27,8 @@ local defaults = {
 		fieldGuide = 0, -- shortens the shared object cooldown
 		permanence = 0, -- lengthens camp buffs
 	},
+	-- Class buffs that are off until asked for, by `/fk buffs <key>`.
+	optionalBuffs = {},
 	-- Per character: when this character last contributed an object.
 	characters = {},
 }

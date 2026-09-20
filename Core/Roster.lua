@@ -89,8 +89,18 @@ function Roster:Prune()
 	end
 end
 
---- Buff groups the classes present already cover, so the planner can skip them.
+--- Buff groups the group already covers, so the planner can skip them.
+--
+-- An observed aura beats a guess: a mage standing at the fire only means
+-- Arcane Intellect is *possible*. When the client lets us read auras we use
+-- what people are actually carrying, and otherwise fall back to assuming a
+-- class provides its buff, which is the older and more optimistic answer.
 function Roster:Coverage()
+	local observed = FK.Auras and FK.Auras:Coverage()
+	if observed then
+		return observed
+	end
+
 	local classes = {}
 	for _, player in pairs(self.players) do
 		if player.class then

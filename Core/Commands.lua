@@ -12,6 +12,7 @@ local function usage()
 		"|cffffff00/fk place <object>|r — record what you put on the fire",
 		"|cffffff00/fk plan|r — print the suggested placements",
 		"|cffffff00/fk announce|r — post the camp to party or say",
+		"|cffffff00/fk buffs [key]|r — class buffs your group is missing; a key toggles an optional one",
 		"|cffffff00/fk cd|r — cooldowns for your characters",
 		"|cffffff00/fk prof <name> <skill>|r — set a profession by hand",
 		"|cffffff00/fk legacy <fieldGuide|permanence> <rank>|r — record Legacy ranks",
@@ -128,6 +129,49 @@ function handlers.legacy(rest)
 	FK.db.legacy[perk] = tonumber(rank)
 	FK.Print("%s rank %s. Camp object cooldown is now %s.", perk, rank,
 		FK.Cooldowns.Format(FK.Cooldowns.Duration(FK.db.legacy)))
+end
+
+function handlers.buffs(rest)
+	rest = (rest or ""):gsub("^%s*(.-)%s*$", "%1"):lower()
+	if rest ~= "" then
+		local buff = FK.Data.classBuffByKey[rest]
+		if not buff or not buff.optional then
+			FK.Print("|cffff4040'%s' is not a buff you can turn on or off|r. Optional: %s",
+				rest, table.concat(FK.Data.OptionalBuffKeys(), ", "))
+			return
+		end
+		FK.db.optionalBuffs[rest] = not FK.db.optionalBuffs[rest]
+		FK.Print("%s is now %s.", buff.label, FK.db.optionalBuffs[rest] and "watched" or "ignored")
+		return
+	end
+
+	local result = FK.Auras:Missing()
+
+	if result.members == 0 then
+		FK.Print("nobody to check, not even you.")
+		return
+	end
+	if result.unreadable >= result.members then
+		FK.Print("this client will not show auras right now (see |cffffff00/fk caps|r).")
+		FK.Print("|cff888888in combat, an encounter or a rated match that is expected.|r")
+		return
+	end
+
+	if #result.missing == 0 then
+		FK.Print("everyone here has the buffs their classes can give.")
+	else
+		FK.Print("missing buffs:")
+		for _, entry in ipairs(result.missing) do
+			FK.Print("  %s", FK.Buffs.MissingText(entry))
+		end
+	end
+
+	if FK.Auras.stale then
+		FK.Print("|cff888888some of that is the last reading we could take, not the current one.|r")
+	end
+	if result.unreadable > 0 then
+		FK.Print("|cff888888%d of %d players could not be read.|r", result.unreadable, result.members)
+	end
 end
 
 function handlers.caps()
